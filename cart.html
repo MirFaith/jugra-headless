@@ -1,0 +1,334 @@
+<!-- Cart Section -->
+<section class="py-10 pb-0 md:py-16 min-h-[80vh] bg-card">
+    <div class="max-w-6xl mx-auto">
+        {% if cart.item_count > 0 and store.checkout_enabled == true %}
+            <!-- Page Header -->
+            <div class="text-center mb-12">
+                <h1 class="font-display text-3xl md:text-4xl font-semibold mb-4">
+                    Shopping cart
+                </h1>
+
+                {% if settings.options.cart_instruction %}
+                    <p class="text-secondary max-w-2xl mx-auto">
+                        {{ settings.options.cart_instruction }}
+                    </p>
+                {% endif %}
+            </div>
+
+            <!-- Error Messages -->
+            {% if cart_error_messages | length > 0 %}
+                <div class="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-8">
+                    <ul class="list-disc list-inside text-accent space-y-1">
+                        {% for error_message in cart_error_messages %}
+                            <li>{{ error_message }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <!-- Cart Items -->
+            <div class="mb-8 px-0 md:px-0">
+                <div class="md:border md:border-secondary-border-50 md:rounded-lg overflow-hidden">
+                    <!-- Table Header (Desktop only) -->
+                    <div class="hidden md:block border-b border-secondary-border/50">
+                        <div class="grid grid-cols-12 gap-4 py-4 px-6">
+                            <div class="col-span-5 font-medium font-semibold tracking-wide">
+                                Description
+                            </div>
+                            <div class="col-span-3 font-medium font-semibold tracking-wide text-right">
+                                Quantity
+                            </div>
+                            <div class="col-span-3 font-medium font-semibold tracking-wide text-right">
+                                Total
+                            </div>
+                            <div class="col-span-1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Cart Items List -->
+                    <div class="divide-y divide-secondary-border/50 border-t border-secondary-border/50 md:border-t-0">
+                        {% for item in cart.items %}
+                            {% set original = item.quantity * item.price %}
+                            <div class="cart-item py-6 md:py-6 md:px-6">
+                                <!-- Mobile Layout -->
+                                <div class="md:hidden px-5">
+                                    <div class="flex gap-4 items-center">
+                                        <!-- Product Image -->
+                                        {# Determine the best image to show: variant image > product featured image #}
+                                        {%- set cart_item_image = item.image -%}
+                                        {%- if not cart_item_image and item.variant and item.variant.image -%}
+                                            {%- set cart_item_image = item.variant.image -%}
+                                        {%- endif -%}
+                                        {%- if not cart_item_image and item.variant and item.variant.featured_image -%}
+                                            {%- set cart_item_image = item.variant.featured_image -%}
+                                        {%- endif -%}
+                                        {%- if not cart_item_image and item.featured_image -%}
+                                            {%- set cart_item_image = item.featured_image -%}
+                                        {%- endif -%}
+                                        {%- if not cart_item_image and item.product.featured_image -%}
+                                            {%- set cart_item_image = item.product.featured_image -%}
+                                        {%- endif -%}
+                                        <a
+                                            href="{{ item.product.url }}"
+                                            class="w-20 h-20 flex-shrink-0 bg-secondary-border/20 rounded overflow-hidden"
+                                        >
+                                            {% if cart_item_image %}
+                                                <img
+                                                    src="{{ cart_item_image | product_image_size('small') }}"
+                                                    alt="{{ item.product.name | escape }}"
+                                                    class="w-full h-full object-cover"
+                                                    loading="lazy"
+                                                >
+                                            {% else %}
+                                                {{ 'product-1' | placeholder_svg_tag }}
+                                            {% endif %}
+                                        </a>
+
+                                        <!-- Product Details -->
+                                        <div class="flex-1 flex flex-col">
+                                            <div class="flex items-start justify-between mb-2">
+                                                <div class="flex-1">
+                                                    <a
+                                                        href="{{ item.product.url }}"
+                                                        class="hover:text-primary transition-colors block mb-1"
+                                                    >
+                                                        <h3 class="text-sm font-medium text-accent">
+                                                            {{ item.product.name | escape }}
+                                                        </h3>
+                                                    </a>
+
+                                                    <!-- Variant & Quantity -->
+                                                    {% for item_option in item.options %}
+                                                        {% if item_option.name != 'Default' and item_option.value != 'Default' %}
+                                                        <p class="text-xs text-secondary">
+                                                            {{ item_option.name | escape }}: {{ item_option.value | escape }} x {{ item.quantity }}
+                                                        </p>
+                                                        {% endif %}
+                                                    {% endfor %}
+
+                                                    <!-- Remove Link -->
+                                                    <a
+                                                        href="/cart/change?line={{ loop.index }}&quantity=0"
+                                                        class="text-secondary hover:text-primary transition-colors text-xs flex items-center gap-1 mt-1"
+                                                    >
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 9l-6 6M9 9l6 6"/>
+                                                        </svg>
+                                                        Remove
+                                                    </a>
+                                                </div>
+
+                                                <!-- Price -->
+                                                <div class="text-right ml-4">
+                                                    {% if item.compare_at_price and item.compare_at_price > item.price %}
+                                                        {% set compare_total = item.compare_at_price * item.quantity %}
+                                                        <p class="text-xs text-secondary line-through">
+                                                            {{ compare_total | money }}
+                                                        </p>
+                                                    {% endif %}
+                                                    <p class="text-sm font-medium item-total">
+                                                        {{ original | money }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Desktop Layout -->
+                                <div class="hidden md:grid md:grid-cols-12 gap-4 items-center">
+                                    <!-- Product Image & Info -->
+                                    <div class="col-span-5 flex gap-4 items-center">
+                                        <a
+                                            href="{{ item.product.url }}"
+                                            class="w-24 h-24 bg-secondary-border/20 overflow-hidden flex-shrink-0"
+                                        >
+                                            {% if cart_item_image %}
+                                                <img
+                                                    src="{{ cart_item_image | product_image_size('small') }}"
+                                                    alt="{{ item.product.name | escape }}"
+                                                    class="w-full h-full object-cover rounded"
+                                                    loading="lazy"
+                                                >
+                                            {% else %}
+                                                {{ 'image' | placeholder_svg_tag }}
+                                            {% endif %}
+                                        </a>
+                                        <div class="flex-1 min-w-0">
+                                            <a
+                                                href="{{ item.product.url }}"
+                                                class="hover:text-primary transition-colors block mb-1"
+                                            >
+                                                <h3 class="font-medium">
+                                                    {{ item.product.name | escape }}
+                                                </h3>
+                                            </a>
+                                            {% for item_option in item.options %}
+                                                {% if item_option.name != 'Default' and item_option.value != 'Default' %}
+                                                <p class="text-sm text-secondary">
+                                                    {{ item_option.name | escape }}: {{ item_option.value | escape }}
+                                                </p>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Quantity Display -->
+                                    <div class="col-span-3 flex justify-end items-center">
+                                        <span class="text-base font-medium">x {{ item.quantity }}</span>
+                                    </div>
+
+                                    <!-- Item Total -->
+                                    <div class="col-span-3 flex flex-col items-end justify-center">
+                                        {% if item.compare_at_price and item.compare_at_price > item.price %}
+                                            {% set compare_total = item.compare_at_price * item.quantity %}
+                                            <p class="text-xs text-secondary line-through">
+                                                {{ compare_total | money }}
+                                            </p>
+                                        {% endif %}
+                                        <p class="text-base font-medium item-total">
+                                            {{ original | money }}
+                                        </p>
+                                    </div>
+
+                                    <!-- Remove Button -->
+                                    <div class="col-span-1 flex justify-center">
+                                        <a
+                                            href="/cart/change?line={{ loop.index }}&quantity=0"
+                                            class="text-secondary hover:text-primary transition-colors"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 9l-6 6M9 9l6 6"/>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Footer -->
+            <div class="max-w-6xl mx-auto px-0 md:px-0">
+                <!-- Calculate Totals -->
+                {% set total_compare_price = 0 %}
+                {% set total_savings = 0 %}
+                {% for item in cart.items %}
+                    {% if item.compare_at_price and item.compare_at_price > item.price %}
+                        {% set total_compare_price = total_compare_price + (item.compare_at_price * item.quantity) %}
+                    {% else %}
+                        {% set total_compare_price = total_compare_price + (item.price * item.quantity) %}
+                    {% endif %}
+                {% endfor %}
+                {% set total_savings = total_compare_price - cart.total_price %}
+
+                {{ form_open('cart', { method: 'post' }) }}
+                    {% for item in cart.items %}
+                        <input type="hidden" name="updates[]" value="{{ item.quantity }}">
+                    {% endfor %}
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                        <!-- Left Column: Order Notes -->
+                        <div class="flex flex-col px-5 md:px-0">
+                            <textarea
+                                name="note"
+                                id="note"
+                                rows="4"
+                                class="w-full text-sm bg-transparent border border-secondary-border px-4 py-3 focus:outline-none focus:border-primary transition-colors rounded-lg"
+                                placeholder="Add any special instructions for your order..."
+                            >{{ cart.note }}</textarea>
+                        </div>
+
+                        <!-- Right Column: Total Summary & Actions -->
+                        <div class="flex flex-col gap-4">
+                            <!-- Total Summary Box -->
+                            <div class="bg-secondary-border/10 border-y border-x-0 md:border border-secondary-border md:rounded-lg p-6">
+                                <div class="space-y-3">
+                                    <!-- Subtotal -->
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm">Subtotal</span>
+                                        <span class="text-sm">
+                                            {{ (total_compare_price > 0 ? total_compare_price : cart.total_price) | money }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Discount -->
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm">Discount</span>
+                                        <span class="text-sm text-secondary">
+                                            {% if total_savings > 0 %}({{ total_savings | money }}){% else %}-{% endif %}
+                                        </span>
+                                    </div>
+
+                                    <!-- Shipping -->
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm">Shipping</span>
+                                        <span class="text-xs text-secondary">Calculated at checkout</span>
+                                    </div>
+
+                                    <!-- Total -->
+                                    <div class="flex justify-between items-center pt-3 border-t border-secondary-border">
+                                        <span class="text-lg font-semibold">Total</span>
+                                        <span class="text-lg font-display text-xl font-semibold text-accent">
+                                            {{ cart.total_price | money }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Action Buttons -->
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                                        <a
+                                            href="/"
+                                            class="w-full bg-transparent border-2 border-primary text-primary px-8 py-4 text-sm font-semibold tracking-widest uppercase hover:bg-primary hover:text-white transition-all text-center flex items-center justify-center"
+                                        >
+                                            Continue Shopping
+                                        </a>
+                                        <button
+                                            type="submit"
+                                            name="checkout"
+                                            id="btn-checkout"
+                                            class="w-full bg-primary border-2 border-primary text-white px-8 py-4 text-sm font-semibold tracking-widest uppercase hover:bg-primary/90 transition-all disabled:bg-secondary-border disabled:text-secondary disabled:cursor-not-allowed disabled:border-secondary-border flex items-center justify-center gap-2"
+                                            {% if cart_total_value < cart_minimum_value %}disabled{% endif %}
+                                        >
+                                            <svg class="animate-spin h-5 w-5 hidden" id="checkout-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span id="checkout-text">
+                                                {% if cart_total_value < cart_minimum_value %}
+                                                    Minimum cart RM{{ cart_minimum_value }} required
+                                                {% else %}
+                                                    Checkout Now
+                                                {% endif %}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        {% else %}
+            <!-- Empty Cart -->
+            <div class="flex items-center justify-center min-h-[60vh]">
+                <div class="text-center px-5">
+                    <h2 class="font-display text-3xl md:text-4xl font-semibold mb-4">
+                        Your cart is empty
+                    </h2>
+                    <p class="text-secondary mb-8">
+                        Looks like you haven't added anything to your cart yet
+                    </p>
+                    <a
+                        href="/"
+                        class="inline-block bg-transparent border-2 border-primary text-primary px-8 py-3.5 text-xs font-semibold tracking-widest uppercase hover:bg-primary hover:text-white hover:border-primary transition-all"
+                    >
+                        Continue Shopping
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>

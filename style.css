@@ -1,0 +1,291 @@
+/***
+
+Theme Name: Jugra
+Theme Description: A minimalist e-commerce theme for artisan brand
+Theme Author: Lutfi Azhar
+Updated By: Lutfi Azhar
+Version : 1.0.0
+Last update : 19 January 2026
+
+***/
+
+/*
+ * Note: This theme now uses Tailwind CSS CDN for all styling.
+ * Custom CSS is minimal and only used for specific needs.
+ */
+
+/* Custom styles for legacy product variant functionality */
+select.single-option-selector__select.select-variant,
+select.single-option-selector__select.select-option {
+    width: 100% !important;
+    border: 1px solid rgba(201, 201, 194, 0.5) !important;
+    border-radius: 0 !important;
+    padding: 12px !important;
+    font-size: 16px !important; /* Prevent zoom on focus in iOS */
+    line-height: 1.5 !important;
+    color: #2E2E2E !important;
+    background-color: #fff !important;
+    background-clip: padding-box !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232E2E2E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px 16px !important;
+    padding-right: 40px !important;
+    transition: border-color 0.15s ease-in-out !important;
+}
+
+select.single-option-selector__select.select-variant:focus,
+select.single-option-selector__select.select-option:focus {
+    outline: none !important;
+    border-color: #2E2E2E !important;
+    box-shadow: none !important;
+}
+
+/* Product quantity buttons */
+.product-quantity-input {
+    display: flex;
+    align-items: center;
+}
+
+.product-quantity-button {
+    outline: none;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,.09);
+    border-radius: 0;
+    background: white;
+    color: rgba(0,0,0,.8);
+    width: 10%;
+    height: 47px;
+    transition: background-color .1s cubic-bezier(.4,0,.6,1);
+}
+
+.product-quantity-form {
+    width: 27.9% !important;
+    height: 47px !important;
+    border-left: none;
+    border-right: none;
+    font-size: 16px;
+    font-weight: 400;
+    text-align: center;
+    border-radius: 0;
+}
+
+/* Remove iOS default styling */
+#product_input_quantity {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0;
+}
+
+#product_minus_quantity,
+#product_plus_quantity {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0;
+}
+
+/* SVG Placeholder styling */
+svg.placeholder-svg {
+    border: 1px solid #eee;
+}
+
+/* Smooth scroll behavior */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Announcement Bar Slider */
+.announcement-slider {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.announcement-slide {
+    position: absolute;
+    width: 100%;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.announcement-slide.active {
+    position: relative;
+    opacity: 1;
+}
+
+/* Product Carousel */
+.carousel-slides {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.3s ease-out;
+}
+
+.carousel-slide {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+}
+
+/* WYSIWYG Content Styling (Prose) */
+.prose {
+    max-width: 65ch;
+    line-height: 1.7;
+}
+
+.prose p {
+    margin-bottom: 1.25em;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
+    color: #2E2E2E;
+}
+
+.prose h1 { font-size: 2em; }
+.prose h2 { font-size: 1.5em; }
+.prose h3 { font-size: 1.25em; }
+.prose h4 { font-size: 1.125em; }
+.prose h5, .prose h6 { font-size: 1em; }
+
+.prose strong, .prose b {
+    font-weight: 600;
+    color: #2E2E2E;
+}
+
+.prose em, .prose i {
+    font-style: italic;
+}
+
+.prose ul, .prose ol {
+    margin-bottom: 1.25em;
+    padding-left: 1.5em;
+}
+
+.prose ul {
+    list-style-type: disc;
+}
+
+.prose ol {
+    list-style-type: decimal;
+}
+
+.prose li {
+    margin-bottom: 0.5em;
+}
+
+.prose a {
+    color: #2E2E2E;
+    text-decoration: underline;
+}
+
+.prose a:hover {
+    color: #6B6B66;
+}
+
+.prose blockquote {
+    border-left: 4px solid #C9C9C2;
+    padding-left: 1.5em;
+    margin: 1.5em 0;
+    font-style: italic;
+    color: #6B6B66;
+}
+
+.prose img {
+    max-width: 100%;
+    height: auto;
+    margin: 1.5em 0;
+}
+
+.prose hr {
+    border: none;
+    border-top: 1px solid #C9C9C2;
+    margin: 2em 0;
+}
+
+/* Table Styling */
+.prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5em 0;
+    display: table;
+}
+
+.prose table thead {
+    background-color: #F7F7F5;
+    display: table-header-group;
+}
+
+.prose table tbody {
+    display: table-row-group;
+}
+
+.prose table tr {
+    display: table-row;
+}
+
+.prose table th {
+    padding: 0.4em 0.6em;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+    color: #2E2E2E;
+    border: 1px solid #C9C9C2;
+    display: table-cell;
+}
+
+.prose table td {
+    padding: 0.4em 0.6em;
+    font-size: 14px;
+    border: 1px solid #C9C9C2;
+    display: table-cell;
+}
+
+.prose table tbody tr:nth-child(even) {
+    background-color: #F7F7F5;
+}
+
+.prose table tbody tr:hover {
+    background-color: rgba(201, 201, 194, 0.1);
+}
+
+/* Code blocks */
+.prose code {
+    background-color: #F7F7F5;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.prose pre {
+    background-color: #F7F7F5;
+    padding: 1em;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 1.5em 0;
+}
+
+.prose pre code {
+    background-color: transparent;
+    padding: 0;
+}
+
+/* Hide scrollbar but keep scrolling functionality */
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+}

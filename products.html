@@ -1,0 +1,169 @@
+<!-- Products Section -->
+<section class="py-10 md:py-16 bg-card">
+    <div class="max-w-6xl mx-auto px-5">
+        <!-- Search Results - No Results -->
+        <div id="search-result-message" class="hidden text-center min-h-[80vh] py-12">
+            <h2 class="font-display text-8xl md:text-9xl font-bold text-accent mb-6">
+                Oops!
+            </h2>
+            <h3 class="font-display text-2xl md:text-3xl font-semibold text-accent mb-4">
+                Search not found
+            </h3>
+            <p class="text-secondary mb-8">
+                We found <span id="search-count">0</span> results for your search keyword "<span id="search-term" class="font-bold"></span>"
+            </p>
+            <a
+                href="/products"
+                class="inline-block bg-transparent border-2 border-primary text-primary px-8 py-3.5 text-xs font-semibold tracking-widest uppercase hover:bg-primary hover:text-white hover:border-primary transition-all"
+            >
+                View All Products
+            </a>
+        </div>
+
+        <!-- Products Header -->
+        <div id="products-header">
+            <!-- Page Title -->
+            <h1 id="products-title" class="font-display text-3xl md:text-4xl font-semibold text-center {% if category and category.description %}mb-4{% else %}mb-8{% endif %}">
+                {% if category %}{{ category.name }}{% else %}Products{% endif %}
+            </h1>
+            {% if category and category.description %}
+            <p class="text-secondary text-center max-w-2xl mx-auto mb-8">
+                {{ category.description }}
+            </p>
+            {% endif %}
+            {% if not category %}
+            <!-- Category Filter (only show on /products page, not on category pages) -->
+            <div id="category-filter" class="flex flex-wrap justify-center gap-6 mb-12">
+                <a
+                    href="/products"
+                    class="text-base font-medium text-accent hover:text-primary transition-colors {% if page.permalink == 'products' %}underline{% endif %}"
+                >
+                    All
+                </a>
+                {% for category in categories %}
+                    <a
+                        href="/{{ category.permalink }}"
+                        class="text-base font-medium text-accent hover:text-primary transition-colors {% if page.permalink and page.permalink == cat.permalink %}underline{% endif %}"
+                    >
+                        {{ category.name }}
+                    </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Search Results - Found -->
+            <div id="search-found-message" class="hidden text-left mb-8">
+                <p class="text-secondary">
+                    We found <span id="search-found-count">0</span> result<span id="search-found-plural">s</span> for your search "<span id="search-found-term" class="font-bold"></span>"
+                </p>
+            </div>
+        </div>
+
+        {% paginate products_collection by 12 %}
+        {% if products_collection %}
+            <!-- Products Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 mb-12">
+                {% for product in products_collection %}
+                    <div class="group">
+                        <a href="{{ product.url }}" class="block">
+                            <!-- Product Image -->
+                            <div class="relative overflow-hidden bg-secondary-border/20 mb-4">
+                                {% if not product.available %}
+                                    <div class="absolute inset-0 flex items-center justify-center z-10">
+                                        <div class="bg-primary/80 text-white w-16 h-16 md:w-20 md:h-20 rounded-full flex flex-col items-center justify-center text-[10px] md:text-xs font-semibold tracking-wider leading-tight">
+                                            <span>SOLD</span>
+                                            <span>OUT</span>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                {% if product.metafields.label.custom %}
+                                    <span class="absolute top-2 right-2 z-10 bg-primary text-white text-[10px] md:text-xs font-semibold px-2 py-1 uppercase tracking-wider">
+                                        {{ product.metafields.label.custom }}
+                                    </span>
+                                {% endif %}
+                                {% if product.featured_image %}
+                                    <img
+                                        src="{{ product.featured_image | product_image_size('large') }}"
+                                        alt="{{ product.name | escape }}"
+                                        class="w-full h-auto group-hover:scale-105 transition-transform duration-500"
+                                        loading="lazy"
+                                    >
+                                {% else %}
+                                    {{ 'product-1' | placeholder_svg_tag }}
+                                {% endif %}
+                            </div>
+
+                            <!-- Product Info -->
+                            <div class="text-center">
+                                <h3 class="text-base font-medium mb-2 group-hover:text-primary transition-colors">
+                                    {{ product.name | escape }}
+                                </h3>
+                                <div class="flex items-center justify-center gap-2">
+                                    {% if product.compare_at_price_max > 0 and product.selected_or_first_available_variant.compare_at_price %}
+                                        <p class="text-sm text-secondary line-through">
+                                            {{ product.selected_or_first_available_variant.compare_at_price | money }}
+                                        </p>
+                                    {% endif %}
+                                    <p class="text-sm text-secondary">
+                                        {{ product.price | money }}
+                                        {% if product.price_varies %}<sup>+</sup>{% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+                {% if paginate.total_pages > 1 %}
+                <!-- Both Previous and Next -->
+                <div class="flex justify-center items-center gap-4">
+                    {% if paginate.previous %}
+                    <a
+                        href="{{ paginate.previous }}"
+                        class="inline-flex items-center justify-center gap-2 w-36 bg-transparent border-2 border-primary text-primary px-6 py-2.5 text-xs font-semibold tracking-widest uppercase hover:bg-primary hover:text-white hover:border-primary transition-all"
+                    >
+                        <i data-feather="arrow-left" class="w-4 h-4"></i>
+                        Previous
+                    </a>
+                    {% endif %}
+                    {% if paginate.next %}
+                    <a
+                        href="{{ paginate.next }}"
+                        class="inline-flex items-center justify-center gap-2 w-36 bg-transparent border-2 border-primary text-primary px-6 py-2.5 text-xs font-semibold tracking-widest uppercase hover:bg-primary hover:text-white hover:border-primary transition-all"
+                    >
+                        Next
+                        <i data-feather="arrow-right" class="w-4 h-4"></i>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            <!-- Pagination -->
+        {% elseif not is_search %}
+            <!-- Empty State -->
+            <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+                {% for i in range(0, 8) %}
+                    <div class="group">
+                        <a href="#" class="block">
+                            <div class="relative aspect-square overflow-hidden bg-secondary-border/20 mb-4">
+                                {{ 'product-1' | placeholder_svg_tag }}
+                            </div>
+                            <div class="text-center">
+                                <h3 class="text-base font-medium mb-2">Product name</h3>
+                                <p class="text-sm text-secondary">$99.00</p>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="text-center mt-12">
+                <p class="text-secondary mb-6">
+                    No products available at the moment. Check back soon!
+                </p>
+            </div>
+        {% endif %}
+        {% endpaginate %}
+    </div>
+</section>

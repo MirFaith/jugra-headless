@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en-US" prefix="og: http://ogp.me/ns#">
+<head>
+    <!-- Meta Tags -->
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width,minimum-scale=1,maximum-scale=1" name="viewport">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+    <meta name="description" content="{{ description }}">
+    {% if settings.images.favourite_icon %}
+    <link rel="shortcut icon" href="{{ settings.images.favourite_icon }}" type="image/png"/>
+    {% endif %}
+
+    <title>{{ title }}</title>
+
+    <!-- Custom Meta Tags -->
+    {% if settings.options.custom_meta %}
+        {{ settings.options.custom_meta }}
+    {% endif %}
+
+    <!-- Page Builder Fonts -->
+    {% if page.metafields.builder.fonts %}
+        {{ page.metafields.builder.fonts }}
+    {% endif %}
+
+    <!-- Fonts: Calm, refined typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Karla:wght@300;400;500&display=swap"
+        rel="stylesheet"
+    >
+
+    <!-- Tailwind CSS Configuration -->
+    {% set color_background = '#F7F6F4' %}
+    {% set color_card = '#FCFBF9' %}
+    {% set color_secondary = '#7A7872' %}
+    {% set color_secondary_border = '#E2E0DC' %}
+    {% set color_text = '#2C2A26' %}
+    {% set color_primary = settings.colors.accent_color ? settings.colors.accent_color : '#2C2A26' %}
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Function to darken a hex color by a percentage
+        function darkenColor(hex, percent) {
+            hex = hex.replace('#', '');
+            let r = parseInt(hex.substring(0, 2), 16);
+            let g = parseInt(hex.substring(2, 4), 16);
+            let b = parseInt(hex.substring(4, 6), 16);
+            r = Math.round(r * (1 - percent / 100));
+            g = Math.round(g * (1 - percent / 100));
+            b = Math.round(b * (1 - percent / 100));
+            return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+        }
+        const primaryColor = '{{ color_primary }}';
+        const darkPrimaryColor = darkenColor(primaryColor, 50);
+
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'background': '{{ color_background }}',
+                        'card': '{{ color_card }}',
+                        'secondary': '{{ color_secondary }}',
+                        'secondary-border': '{{ color_secondary_border }}',
+                        'accent': '{{ color_text }}',
+                        'primary': primaryColor,
+                        'dark-primary': darkPrimaryColor,
+                    },
+                    fontFamily: {
+                        'display': ['Cormorant Garamond', 'serif'],
+                        'sans': ['Karla', 'system-ui', 'sans-serif'],
+                    },
+                    letterSpacing: {
+                        'relaxed': '0.05em',
+                        'calm': '0.08em',
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- Theme CSS & Head -->
+    {{ css }}
+    {{ head }}
+
+    <!-- Page Builder CSS -->
+    {% if page.metafields.builder.css %}
+        <style type="text/css">
+            {{ page.metafields.builder.css }}
+
+            #u_body .container, .footer .container, .announcement-bar .container {
+                padding: 0 15px;
+            }
+
+            .footer a, .header a {
+                color: #444;
+                text-decoration: none;
+            }
+
+            .footer a:hover, .footer a:focus, .header a:hover, .header a:focus {
+                color: #777;
+                text-decoration: none;
+            }
+        </style>
+    {% endif %}
+
+    <!-- Open Graph Meta Tags -->
+    {%- set og_type = 'website' -%}
+    {%- set og_title = title -%}
+    {%- set og_url = page.url -%}
+    {%- set og_description = description -%}
+
+    {# Default fallback image: og_image_custom > hero_image > first product image #}
+    {%- set og_fallback_image = null -%}
+    {%- if settings.images.og_image_custom -%}
+        {%- set og_fallback_image = settings.images.og_image_custom -%}
+    {%- elseif settings.images.hero_image -%}
+        {%- set og_fallback_image = settings.images.hero_image -%}
+    {%- elseif products and products | length > 0 and products[0].featured_image -%}
+        {%- set og_fallback_image = products[0].featured_image -%}
+    {%- endif -%}
+
+    {# Determine OG image based on page type #}
+    {%- set og_image = null -%}
+    {%- if page.template == 'product' and product.featured_image -%}
+        {%- set og_image = product.featured_image -%}
+    {%- elseif page.template == 'index' -%}
+        {%- set og_image = og_fallback_image -%}
+    {%- elseif page.template == 'page' -%}
+        {# For pages: use page.image if available, otherwise fallback #}
+        {%- if page.image -%}
+            {%- set og_image = page.image -%}
+        {%- else -%}
+            {%- set og_image = og_fallback_image -%}
+        {%- endif -%}
+    {%- else -%}
+        {# Other pages (category, products, etc): use fallback #}
+        {%- set og_image = og_fallback_image -%}
+    {%- endif -%}
+
+    <meta property="og:site_name" content="{{ store.name }}">
+    <meta property="og:url" content="{{ og_url }}">
+    <meta property="og:title" content="{{ og_title }}">
+    <meta property="og:type" content="{{ og_type }}">
+    <meta property="og:description" content="{{ og_description }}">
+    {%- if og_image -%}
+        <meta property="og:image" content="{{ og_image }}">
+    {%- endif -%}
+</head>
+
+<body class="{% if page.metafields.builder.json == false %}bg-background {% endif %}text-accent antialiased">
+    {% set is_home = page.template == 'home' %}
+    {% set is_product = page.template == 'product' %}
+
+    {# Logo size from settings (defaults to h-10 if not set) #}
+    {# Mobile logo is 2 sizes smaller than desktop #}
+    {% if settings.options.logo_size %}
+        {% set logo_size_desktop = settings.options.logo_size %}
+        {% if settings.options.logo_size == 'h-14' %}
+            {% set logo_size_mobile = 'h-12' %}
+        {% elseif settings.options.logo_size == 'h-12' %}
+            {% set logo_size_mobile = 'h-10' %}
+        {% elseif settings.options.logo_size == 'h-10' %}
+            {% set logo_size_mobile = 'h-8' %}
+        {% elseif settings.options.logo_size == 'h-8' %}
+            {% set logo_size_mobile = 'h-6' %}
+        {% else %}
+            {% set logo_size_mobile = 'h-6' %}
+        {% endif %}
+    {% else %}
+        {% set logo_size_desktop = 'h-10' %}
+        {% set logo_size_mobile = 'h-8' %}
+    {% endif %}
+
+    <!-- Announcement Bar (always in flow) -->
+    {% if settings.options.announcement_text_1 or settings.options.announcement_text_2 or settings.options.announcement_text_3 %}
+        <div class="bg-primary relative overflow-hidden" id="announcement-bar">
+            <div class="announcement-slider">
+                {% if settings.options.announcement_text_1 %}
+                    <div class="announcement-slide active">
+                        <div class="flex items-center justify-center py-3 px-5">
+                            {% if settings.options.announcement_url_1 %}
+                            <a href="{{ settings.options.announcement_url_1 }}" class="text-sm text-white text-center hover:underline">
+                                {{ settings.options.announcement_text_1 }}
+                            </a>
+                            {% else %}
+                            <p class="text-sm text-white text-center">
+                                {{ settings.options.announcement_text_1 }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if settings.options.announcement_text_2 %}
+                    <div class="announcement-slide {% if not settings.options.announcement_text_1 %}active{% endif %}">
+                        <div class="flex items-center justify-center py-3 px-5">
+                            {% if settings.options.announcement_url_2 %}
+                            <a href="{{ settings.options.announcement_url_2 }}" class="text-sm text-white text-center hover:underline">
+                                {{ settings.options.announcement_text_2 }}
+                            </a>
+                            {% else %}
+                            <p class="text-sm text-white text-center">
+                                {{ settings.options.announcement_text_2 }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if settings.options.announcement_text_3 %}
+                    <div class="announcement-slide {% if not settings.options.announcement_text_1 and not settings.options.announcement_text_2 %}active{% endif %}">
+                        <div class="flex items-center justify-center py-3 px-5">
+                            {% if settings.options.announcement_url_3 %}
+                            <a href="{{ settings.options.announcement_url_3 }}" class="text-sm text-white text-center hover:underline">
+                                {{ settings.options.announcement_text_3 }}
+                            </a>
+                            {% else %}
+                            <p class="text-sm text-white text-center">
+                                {{ settings.options.announcement_text_3 }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Header Wrapper -->
+    <div>
+        <!-- Navigation -->
+        <nav class="bg-card border-b border-secondary-border/30 relative">
+        {% set menu_item_count = menus.main_menu ? menus.main_menu.links|length : 0 %}
+
+        <div class="max-w-6xl mx-auto px-5">
+            <!-- Mobile Header -->
+            <div class="flex lg:hidden items-center justify-between py-5">
+                <!-- Hamburger Menu Button (Left) -->
+                {% if menus.main_menu %}
+                    <button
+                        id="mobile-menu-btn"
+                        class="text-accent hover:text-primary transition-colors"
+                        aria-label="Toggle menu"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                {% else %}
+                    <div></div>
+                {% endif %}
+
+                <!-- Logo (Center) -->
+                <div class="absolute left-1/2 -translate-x-1/2">
+                    <a href="/" class="block group">
+                        {% if settings.images.header_logo %}
+                            <img src="{{ settings.images.header_logo }}" alt="{{ store.name }}" class="{{ logo_size_mobile }} block">
+                        {% else %}
+                            <span class="font-display text-2xl font-medium text-accent group-hover:text-primary transition-colors">{{ store.name }}</span>
+                        {% endif %}
+                    </a>
+                </div>
+
+                <!-- Search & Cart (Right) -->
+                <div class="flex items-center gap-4">
+                    <button
+                        id="search-btn-mobile"
+                        class="text-accent hover:text-primary transition-colors"
+                        aria-label="Open search"
+                    >
+                        <i data-feather="search"></i>
+                    </button>
+
+                    <button
+                        id="cart-btn-mobile"
+                        class="relative text-accent hover:text-primary transition-colors"
+                        aria-label="Open cart"
+                    >
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                        {% if cart.item_count > 0 %}
+                            <span class="cart-count absolute -top-2 -right-2 bg-primary text-white text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                                {{ cart.item_count }}
+                            </span>
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Desktop Header -->
+            <div class="hidden lg:grid grid-cols-3 items-center py-5">
+                <!-- Left: Desktop Menu -->
+                <div class="flex items-center gap-10">
+                    <div class="{% if menu_item_count > 5 %}hidden{% else %}flex{% endif %} items-center gap-10">
+                        {% if menus.main_menu %}
+                            {% for link in menus.main_menu.links %}
+                                {% if link.links %}
+                                    <!-- Parent Menu with Dropdown -->
+                                    <div class="relative group">
+                                        <button
+                                            type="button"
+                                            class="text-xs font-medium tracking-widest uppercase text-accent hover:text-primary transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                        >
+                                            {{ link.title }}
+                                            <svg
+                                                class="w-3 h-3 transition-transform group-hover:rotate-180"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </button>
+
+                                        <!-- Level 1 Dropdown -->
+                                        <div class="absolute left-0 top-full mt-2 w-56 bg-card border border-secondary-border/30 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                            {% for sublink in link.links %}
+                                                {% if sublink.links %}
+                                                    <!-- Level 2 Parent -->
+                                                    <div class="relative group/sub">
+                                                        <button
+                                                            type="button"
+                                                            class="w-full block px-5 py-3 text-sm font-medium text-accent hover:bg-secondary-border/10 transition-colors flex items-center justify-between cursor-pointer"
+                                                        >
+                                                            {{ sublink.title }}
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                            </svg>
+                                                        </button>
+
+                                                        <!-- Level 2 Dropdown -->
+                                                        <div class="absolute left-full top-0 w-56 bg-card border border-secondary-border/30 shadow-lg opacity-0 invisible group-hover/sub:opacity-100 group-hover/sub:visible transition-all duration-200">
+                                                            {% for subsublink in sublink.links %}
+                                                                <a
+                                                                    href="{{ subsublink.url }}"
+                                                                    class="block px-5 py-3 text-sm font-medium text-accent hover:bg-secondary-border/10 transition-colors"
+                                                                >
+                                                                    {{ subsublink.title }}
+                                                                </a>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <!-- Level 1 Link -->
+                                                    <a
+                                                        href="{{ sublink.url }}"
+                                                        class="block px-5 py-3 text-sm font-medium text-accent hover:bg-secondary-border/10 transition-colors"
+                                                    >
+                                                        {{ sublink.title }}
+                                                    </a>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <!-- Simple Link -->
+                                    <a
+                                        href="{{ link.url }}"
+                                        class="text-xs font-medium tracking-widest uppercase text-accent hover:text-primary transition-colors"
+                                    >
+                                        {{ link.title }}
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Hamburger Menu Button (for menus > 5 items) -->
+                    {% if menus.main_menu and menu_item_count > 5 %}
+                        <button
+                            id="mobile-menu-btn-desktop"
+                            class="text-accent hover:text-primary transition-colors"
+                            aria-label="Toggle menu"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                            </svg>
+                        </button>
+                    {% endif %}
+                </div>
+
+                <!-- Center: Text Logo -->
+                <div class="flex justify-center">
+                    <a href="/" class="block group">
+                        {% if settings.images.header_logo %}
+                            <img src="{{ settings.images.header_logo }}" alt="{{ store.name }}" class="{{ logo_size_desktop }} block">
+                        {% else %}
+                            <span class="font-display text-3xl font-medium text-accent group-hover:text-primary transition-colors">{{ store.name }}</span>
+                        {% endif %}
+                    </a>
+                </div>
+
+                <!-- Right: Search & Cart -->
+                <div class="flex items-center justify-end gap-6">
+                    <!-- Search Button -->
+                    <button
+                        id="search-btn"
+                        class="text-accent hover:text-primary transition-colors"
+                        aria-label="Open search"
+                    >
+                        <i data-feather="search"></i>
+                    </button>
+
+                    <!-- Cart Button -->
+                    <button
+                        id="cart-btn"
+                        class="relative text-accent hover:text-primary transition-colors"
+                        aria-label="Open cart"
+                    >
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                        {% if cart.item_count > 0 %}
+                            <span id="cart-count" class="absolute -top-1.5 -right-1.5 bg-primary text-white text-[10px] font-semibold w-4 h-4 rounded-full flex items-center justify-center">
+                                {{ cart.item_count }}
+                            </span>
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Overlay -->
+        {% if menus.main_menu %}
+            <div id="mobile-menu" class="fixed inset-0 bg-primary/50 backdrop-blur-sm z-40 opacity-0 invisible transition-all duration-300 lg:hidden">
+                <div id="mobile-menu-panel" class="fixed left-0 top-0 bottom-0 w-full bg-card shadow-2xl overflow-y-auto transform -translate-x-full transition-transform duration-300 ease-out">
+                <!-- Mobile Menu Header -->
+                <div class="flex items-center justify-between px-5 py-5 border-b border-secondary-border/30">
+                    <a href="/" class="block group">
+                        {% if settings.images.header_logo %}
+                            <img src="{{ settings.images.header_logo }}" alt="{{ store.name }}" class="{{ logo_size_mobile }} block">
+                        {% else %}
+                            <span class="font-display text-2xl font-medium text-accent group-hover:text-primary transition-colors">{{ store.name }}</span>
+                        {% endif %}
+                    </a>
+                    <button
+                        id="mobile-menu-close"
+                        class="text-accent hover:text-primary transition-colors"
+                        aria-label="Close menu"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Mobile Menu Items -->
+                <div class="py-2">
+                    {% if menus.main_menu %}
+                        {% for link in menus.main_menu.links %}
+                            {% if link.links %}
+                                <!-- Parent Menu with Submenu -->
+                                <div class="border-b border-secondary-border/20">
+                                    <button class="mobile-menu-toggle w-full px-5 py-4 flex items-center justify-between text-left text-base font-semibold text-accent hover:bg-secondary-border/10 transition-colors">
+                                        <span>{{ link.title | upper }}</span>
+                                        <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </button>
+                                    <div class="mobile-submenu hidden bg-secondary-border/5">
+                                        {% for sublink in link.links %}
+                                            {% if sublink.links %}
+                                                <!-- Level 2 with Submenu -->
+                                                <div>
+                                                    <button class="mobile-submenu-toggle w-full px-8 py-3 flex items-center justify-between text-left text-sm font-medium text-accent hover:bg-secondary-border/10 transition-colors">
+                                                        <span>{{ sublink.title }}</span>
+                                                        <svg class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                        </svg>
+                                                    </button>
+                                                    <div class="mobile-sub-submenu hidden bg-secondary-border/10">
+                                                        {% for subsublink in sublink.links %}
+                                                            <a
+                                                                href="{{ subsublink.url }}"
+                                                                class="block px-12 py-3 text-sm text-accent hover:bg-secondary-border/10 transition-colors"
+                                                            >
+                                                                {{ subsublink.title }}
+                                                            </a>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <!-- Level 2 Link -->
+                                                <a
+                                                    href="{{ sublink.url }}"
+                                                    class="block px-8 py-3 text-sm font-medium text-accent hover:bg-secondary-border/10 transition-colors"
+                                                >
+                                                    {{ sublink.title }}
+                                                </a>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <!-- Simple Link -->
+                                <a
+                                    href="{{ link.url }}"
+                                    class="block px-5 py-4 text-base font-semibold text-accent hover:bg-secondary-border/10 transition-colors border-b border-secondary-border/20"
+                                >
+                                    {{ link.title | upper }}
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Desktop Menu Dropdown (for menus > 5 items) -->
+        {% if menus.main_menu and menu_item_count > 5 %}
+            <div id="desktop-menu-dropdown" class="hidden lg:block absolute left-0 right-0 top-full bg-card border-t border-secondary-border/30 shadow-xl z-40 opacity-0 invisible transition-all duration-200 transform origin-top">
+                <div class="max-w-6xl mx-auto px-5 py-8">
+                    <div class="flex flex-wrap gap-x-12 gap-y-6">
+                        {% for link in menus.main_menu.links %}
+                            <div class="min-w-[140px]">
+                                {% if link.links %}
+                                    <!-- Parent Menu with Children -->
+                                    <h3 class="text-xs font-semibold tracking-widest uppercase text-accent mb-3 pb-2 border-b border-secondary-border/30 pt-2 pb-4">{{ link.title }}</h3>
+                                    <ul class="space-y-2">
+                                        {% for sublink in link.links %}
+                                            <li>
+                                                <a href="{{ sublink.url }}" class="text-sm text-secondary hover:text-primary transition-colors">
+                                                    {{ sublink.title }}
+                                                </a>
+                                                {% if sublink.links %}
+                                                    <!-- Third level menu items -->
+                                                    <ul class="mt-2 space-y-1">
+                                                        {% for subsublink in sublink.links %}
+                                                            <li class="border-l border-secondary-border/30 pl-3">
+                                                                <a href="{{ subsublink.url }}" class="text-xs text-secondary/80 hover:text-primary transition-colors">
+                                                                    {{ subsublink.title }}
+                                                                </a>
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <!-- Simple Link -->
+                                    <a href="{{ link.url }}" class="text-xs font-semibold tracking-widest uppercase text-accent hover:text-primary transition-colors block py-2">
+                                        {{ link.title }}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </nav>
+    </div><!-- End Header Wrapper -->
+
+    <!-- Search Modal -->
+    <div id="search-modal" class="fixed inset-0 bg-dark-primary/30 backdrop-blur-sm z-50 opacity-0 invisible transition-all duration-300">
+        <div id="search-modal-panel" class="fixed top-0 left-0 right-0 bg-card shadow-lg transform -translate-y-full transition-transform duration-300 ease-out">
+            <div class="max-w-4xl mx-auto px-5 py-8">
+                <div class="flex items-center gap-4 mb-0">
+                    <!-- Search Input -->
+                    <div class="flex-1 relative">
+                        <input
+                            type="text"
+                            id="search-input"
+                            placeholder="Search products..."
+                            class="w-full px-6 py-4 text-base border-2 border-secondary-border/30 focus:border-primary focus:outline-none rounded-lg"
+                            autofocus
+                        >
+                        <button
+                            id="search-submit"
+                            class="absolute right-4 top-1/2 -translate-y-1/2 text-accent hover:text-primary transition-colors"
+                        >
+                            <i data-feather="search" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Close Button -->
+                    <button
+                        id="search-modal-close"
+                        class="pr-0 text-accent hover:text-primary transition-colors"
+                        aria-label="Close search"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Drawer -->
+    <div id="cart-drawer" class="fixed inset-0 bg-dark-primary/30 backdrop-blur-sm z-50 opacity-0 invisible transition-all duration-300">
+        <div id="cart-drawer-panel" class="fixed right-0 top-0 bottom-0 w-full md:w-[450px] bg-card shadow-2xl overflow-y-auto transform translate-x-full transition-transform duration-300 ease-out flex flex-col">
+            <!-- Cart Header -->
+            <div class="flex items-center justify-between px-5 py-5 border-b border-secondary-border/30">
+                <h2 class="font-display text-xl font-semibold text-accent">
+                    Shopping cart
+                </h2>
+                <button
+                    id="cart-drawer-close"
+                    class="text-accent hover:text-primary transition-colors"
+                    aria-label="Close cart"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Cart Content -->
+            <div id="cart-content" class="flex-1 overflow-y-auto">
+                {% if cart.item_count > 0 %}
+                    <!-- Cart Items List -->
+                    <div id="cart-items">
+                        {% for item in cart.items %}
+                            <div class="cart-item px-5 py-4 border-b border-secondary-border/20 flex items-center gap-4">
+                                <!-- Product Image -->
+                                <a
+                                    href="{{ item.product.url }}"
+                                    class="w-20 h-20 flex-shrink-0 bg-secondary-border/20 rounded overflow-hidden"
+                                >
+                                    {% if item.product.featured_image %}
+                                        <img
+                                            src="{{ item.product.featured_image | product_image_size('small') }}"
+                                            alt="{{ item.product.name | escape }}"
+                                            class="w-full h-full object-cover"
+                                            loading="lazy"
+                                        >
+                                    {% else %}
+                                        {{ 'product-1' | placeholder_svg_tag }}
+                                    {% endif %}
+                                </a>
+
+                                <!-- Product Details -->
+                                <div class="flex-1 flex flex-col">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <div class="flex-1">
+                                            <a
+                                                href="{{ item.product.url }}"
+                                                class="group hover:text-primary transition-colors block mb-1"
+                                            >
+                                                <h3 class="text-sm font-medium text-accent group-hover:text-primary transition-colors">
+                                                    {{ item.product.name | escape }}
+                                                </h3>
+                                            </a>
+
+                                            <!-- Variant & Quantity -->
+                                            {% set has_variant = false %}
+                                            {% for item_option in item.options %}
+                                                {% if item_option.name != "Default" and item_option.value != "Default" %}
+                                                    {% set has_variant = true %}
+                                                    <p class="text-xs text-secondary">
+                                                        {{ item_option.name | escape }}: {{ item_option.value | escape }} x {{ item.quantity }}
+                                                    </p>
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if not has_variant %}
+                                            <p class="text-xs text-secondary">
+                                                x {{ item.quantity }}
+                                            </p>
+                                            {% endif %}
+
+                                            <!-- Remove Link -->
+                                            <a
+                                                href="/cart/change?line={{ loop.index }}&quantity=0"
+                                                class="text-secondary hover:text-primary transition-colors text-xs inline-flex items-center gap-1 mt-1"
+                                            >
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 9l-6 6M9 9l6 6"/>
+                                                </svg>
+                                                Remove
+                                            </a>
+                                        </div>
+
+                                        <div class="ml-2 text-right">
+                                            {% if item.compare_at_price and item.compare_at_price > item.price %}
+                                                {% set compare_total = item.compare_at_price * item.quantity %}
+                                                <p class="text-xs text-secondary line-through">
+                                                    {{ compare_total | money }}
+                                                </p>
+                                            {% endif %}
+                                            <p class="text-sm font-medium text-accent">
+                                                {{ item.total | money }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <!-- Empty Cart State -->
+                    <div id="empty-cart" class="flex flex-col items-center justify-center h-full px-5 py-10">
+                        <p class="text-lg font-medium text-accent mb-2">Your cart is empty</p>
+                        <p class="text-sm text-secondary text-center mb-6">
+                            Add some products to get started
+                        </p>
+                        <button
+                            id="continue-shopping"
+                            class="inline-block bg-transparent border-2 border-primary text-primary px-8 py-3.5 text-xs font-semibold tracking-widest uppercase hover:bg-primary hover:text-white hover:border-primary transition-all"
+                        >
+                            Continue Shopping
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Cart Footer -->
+            {% if cart.item_count > 0 %}
+                <div id="cart-footer" class="border-t border-secondary-border/30 p-5 bg-secondary-border/5">
+                    <!-- Subtotal -->
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-base font-medium text-accent">Total</span>
+                        <span id="cart-subtotal" class="font-display text-xl font-semibold text-accent">
+                            {{ cart.total_price | money }}
+                        </span>
+                    </div>
+
+                    <p class="text-xs text-secondary mb-4 text-center">
+                        Shipping and taxes calculated at checkout
+                    </p>
+
+                    <!-- View Cart Button -->
+                    <a
+                        href="/cart"
+                        class="block w-full bg-transparent border-2 border-primary text-primary py-4 text-sm font-semibold tracking-wider uppercase hover:bg-primary hover:text-white transition-all text-center mb-3"
+                    >
+                        View Cart
+                    </a>
+
+                    <!-- Checkout Button -->
+                    {{ form_open('cart', { method: 'post' }) }}
+                        {% for item in cart.items %}
+                            <input type="hidden" name="updates[]" value="{{ item.quantity }}">
+                        {% endfor %}
+                        <button
+                            type="submit"
+                            name="checkout"
+                            id="btn-checkout-drawer"
+                            class="w-full bg-primary text-white py-4 text-sm font-semibold tracking-wider uppercase hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+                        >
+                            <svg class="animate-spin h-5 w-5 hidden" id="checkout-drawer-spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span id="checkout-drawer-text">Checkout</span>
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Page Content -->
+    {{ content }}
+
+    <!-- Footer -->
+    <footer class="py-16 bg-card border-t border-secondary-border/30">
+        <div class="max-w-6xl mx-auto px-5">
+            <div class="flex flex-col items-center text-center space-y-8">
+                <!-- Store Logo/Name -->
+                <div>
+                    <a href="/" class="block group">
+                        {% if settings.images.header_logo %}
+                            <img src="{{ settings.images.header_logo }}" alt="{{ store.name }}" class="{{ logo_size_mobile }} md:{{ logo_size_desktop }} block">
+                        {% else %}
+                            <span class="font-display text-3xl font-medium text-accent group-hover:text-primary transition-colors">{{ store.name }}</span>
+                        {% endif %}
+                    </a>
+                </div>
+
+                <!-- Social Media Icons -->
+                {% set facebook_url = settings.options.facebook %}
+                {% set instagram_url = settings.options.instagram %}
+                {% set twitter_url = settings.options.twitter %}
+                {% set tiktok_url = settings.options.tiktok %}
+                {% set youtube_url = settings.options.youtube %}
+                {% set threads_url = settings.options.threads %}
+
+                <div class="flex items-center justify-center gap-4">
+                    {% if facebook_url %}
+                        <a
+                            href="{{ facebook_url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-secondary hover:text-primary transition-colors"
+                            aria-label="Facebook"
+                        >
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                            </svg>
+                        </a>
+                    {% endif %}
+
+                    {% if instagram_url %}
+                        <a
+                            href="{{ instagram_url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-secondary hover:text-primary transition-colors"
+                            aria-label="Instagram"
+                        >
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                            </svg>
+                        </a>
+                    {% endif %}
+
+                    {% if twitter_url %}
+                        <a
+                            href="{{ twitter_url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-secondary hover:text-primary transition-colors"
+                            aria-label="X"
+                        >
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                        </a>
+                    {% endif %}
+
+                    {% if tiktok_url %}
+                        <a
+                            href="{{ tiktok_url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-secondary hover:text-primary transition-colors"
+                            aria-label="TikTok"
+                        >
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                            </svg>
+                        </a>
+                    {% endif %}
+
+                    {% if youtube_url %}
+                        <a
+                            href="{{ youtube_url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-secondary hover:text-primary transition-colors"
+                            aria-label="YouTube"
+                        >
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                            </svg>
+                        </a>
+                    {% endif %}
+
+                    {% if threads_url %}
+                        <a
+                            href="{{ threads_url }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="text-secondary hover:text-primary transition-colors"
+                            aria-label="Threads"
+                        >
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M6.321 6.016c-.27-.18-1.166-.802-1.166-.802.756-1.081 1.753-1.502 3.132-1.502.975 0 1.803.327 2.394.948s.928 1.509 1.005 2.644q.492.207.905.484c1.109.745 1.719 1.86 1.719 3.137 0 2.716-2.226 5.075-6.256 5.075C4.594 16 1 13.987 1 7.994 1 2.034 4.482 0 8.044 0 9.69 0 13.55.243 15 5.036l-1.36.353C12.516 1.974 10.163 1.43 8.006 1.43c-3.565 0-5.582 2.171-5.582 6.79 0 4.143 2.254 6.343 5.63 6.343 2.777 0 4.847-1.443 4.847-3.556 0-1.438-1.208-2.127-1.27-2.127-.236 1.234-.868 3.31-3.644 3.31-1.618 0-3.013-1.118-3.013-2.582 0-2.09 1.984-2.847 3.55-2.847.586 0 1.294.04 1.663.114 0-.637-.54-1.728-1.9-1.728-1.25 0-1.566.405-1.967.868ZM8.716 8.19c-2.04 0-2.304.87-2.304 1.416 0 .878 1.043 1.168 1.6 1.168 1.02 0 2.067-.282 2.232-2.423a6.2 6.2 0 0 0-1.528-.161"/>
+                            </svg>
+                        </a>
+                    {% endif %}
+                </div>
+
+                <!-- Footer Menu -->
+                {% if menus.footer_menu %}
+                    <div>
+                        <ul class="flex flex-col md:flex-row md:flex-wrap justify-center items-center gap-3 md:gap-6">
+                            {% for link in menus.footer_menu.links %}
+                                <li>
+                                    <a
+                                        href="{{ link.url }}"
+                                        class="text-sm text-secondary hover:text-primary transition-colors"
+                                    >
+                                        {{ link.title }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <!-- Copyright -->
+                <div class="text-xs text-secondary text-center">
+                    <p>
+                        &copy; {{ "now" | date("Y") }} {{ store.name }}{% if settings.options.company_id %} ({{ settings.options.company_id }}){% endif %}. All rights reserved.
+                    </p>
+                    <a href="https://shoppego.com" target="_blank" rel="nofollow noopener" class="mt-2 inline-flex items-center justify-center group relative">
+                        <span class="group-hover:opacity-0 group-hover:scale-75 transition-all duration-200">Powered by Shoppego</span>
+                        <img src="https://img.shoppegram.com/system_setting/logo/vP0OFAdHYk7QIpDrv51y.svg" alt="Shoppego" class="h-5 absolute left-1/2 -translate-x-1/2 opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200 mt-3">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Recent Sales Popup -->
+    <div class="social-proofs"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.24.1/feather.min.js"></script>
+
+    {{ js }}
+
+    <!-- Page Builder JS -->
+    {% if page.metafields.builder.js %}
+        <script type="text/javascript">
+            {{ page.metafields.builder.js }}
+        </script>
+    {% endif %}
+
+    <!-- Cloudflare Web Analytics -->
+    <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "aecf724216724271b6e368efb7fa20aa"}'></script>
+</body>
+</html>

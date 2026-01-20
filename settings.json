@@ -1,0 +1,439 @@
+{
+    "fieldsets": [
+        {
+            "id": "header",
+            "label": "Header"
+        },
+        {
+            "id": "hero",
+            "label": "Featured banner"
+        },
+        {
+            "id": "categories",
+            "label": "Featured categories"
+        },
+        {
+            "id": "footer",
+            "label": "Footer"
+        },
+        {
+            "id": "livechat",
+            "label": "Livechat widget"
+        },
+        {
+            "id": "theme",
+            "label": "Theme settings"
+        }
+    ],
+
+    "images": [
+        {
+            "id": "header_logo",
+            "label": "Logo",
+            "description": "Your store logo",
+            "fieldset": "header"
+        },
+        {
+            "id": "favourite_icon",
+            "label": "Favicon",
+            "description": "Good for an image up to 30x30 px",
+            "fieldset": "theme"
+        },
+        {
+            "id": "hero_image",
+            "label": "Hero 1 Image",
+            "description": "Upload hero banner image (recommended size: 1080x1350px, 4:5 ratio)",
+            "fieldset": "hero"
+        },
+        {
+            "id": "hero_2_image",
+            "label": "Hero 2 Image",
+            "description": "Upload hero banner image (recommended size: 1080x1350px, 4:5 ratio)",
+            "fieldset": "hero"
+        },
+        {
+            "id": "category_1_image",
+            "label": "Category 1 Image",
+            "description": "Upload image for first featured category",
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_2_image",
+            "label": "Category 2 Image",
+            "description": "Upload image for second featured category",
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_3_image",
+            "label": "Category 3 Image",
+            "description": "Upload image for third featured category",
+            "fieldset": "categories"
+        },
+        {
+            "id": "og_image_custom",
+            "label": "Social Share Image",
+            "description": "Default image for social media sharing (recommended size: 1200x630px)",
+            "fieldset": "theme"
+        }
+    ],
+
+    "options": [
+        {
+            "id": "logo_size",
+            "label": "Logo size",
+            "type": "select",
+            "options": [
+                ["Extra large", "h-14"],
+                ["Large", "h-12"],
+                ["Medium", "h-10"],
+                ["Small", "h-8"],
+                ["Extra small", "h-6"]
+            ],
+            "default": "h-10",
+            "fieldset": "header"
+        },
+        {
+            "id": "announcement_text_1",
+            "label": "Announcement Text 1",
+            "type": "text",
+            "description": "First announcement text (leave empty to hide)",
+            "default": "",
+            "fieldset": "header"
+        },
+        {
+            "id": "announcement_url_1",
+            "label": "Announcement URL 1",
+            "type": "text",
+            "description": "Optional link for first announcement (leave empty for no link)",
+            "default": "",
+            "fieldset": "header"
+        },
+        {
+            "id": "announcement_text_2",
+            "label": "Announcement Text 2",
+            "type": "text",
+            "description": "Second announcement text (leave empty to hide)",
+            "default": "",
+            "fieldset": "header"
+        },
+        {
+            "id": "announcement_url_2",
+            "label": "Announcement URL 2",
+            "type": "text",
+            "description": "Optional link for second announcement (leave empty for no link)",
+            "default": "",
+            "fieldset": "header"
+        },
+        {
+            "id": "announcement_text_3",
+            "label": "Announcement Text 3",
+            "type": "text",
+            "description": "Third announcement text (leave empty to hide)",
+            "default": "",
+            "fieldset": "header"
+        },
+        {
+            "id": "announcement_url_3",
+            "label": "Announcement URL 3",
+            "type": "text",
+            "description": "Optional link for third announcement (leave empty for no link)",
+            "default": "",
+            "fieldset": "header"
+        },
+        {
+            "id": "hero_overlay",
+            "label": "Show/Hide overlay at Hero banner image",
+            "type": "boolean",
+            "default": true,
+            "fieldset": "hero"
+        },
+        {
+            "id": "hero_headline",
+            "label": "Hero 1 Headline",
+            "type": "text",
+            "description": "Main headline text for first hero slide",
+            "default": "Jugra heritage series",
+            "fieldset": "hero"
+        },
+        {
+            "id": "hero_cta",
+            "label": "Hero 1 Button Text",
+            "type": "text",
+            "description": "Call-to-action button text for first hero slide",
+            "default": "View Collection",
+            "fieldset": "hero"
+        },
+        {
+            "id": "hero_cta_link",
+            "label": "Hero 1 Button Link",
+            "type": "text",
+            "description": "URL for the first hero button",
+            "default": "/products",
+            "fieldset": "hero"
+        },
+        {
+            "id": "hero_2_headline",
+            "label": "Hero 2 Headline",
+            "type": "text",
+            "description": "Main headline text for second hero slide",
+            "default": "Crafted with care",
+            "fieldset": "hero"
+        },
+        {
+            "id": "hero_2_cta",
+            "label": "Hero 2 Button Text",
+            "type": "text",
+            "description": "Call-to-action button text for second hero slide",
+            "default": "View Collection",
+            "fieldset": "hero"
+        },
+        {
+            "id": "hero_2_cta_link",
+            "label": "Hero 2 Button Link",
+            "type": "text",
+            "description": "URL for the second hero button",
+            "default": "/products",
+            "fieldset": "hero"
+        },
+        {
+            "id": "category_section",
+            "label": "Show/Hide featured category section",
+            "type": "boolean",
+            "default": true,
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_1_name",
+            "label": "Category 1 Name",
+            "type": "text",
+            "description": "Name for first featured category",
+            "default": "Collection A",
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_1_link",
+            "label": "Category 1 Link",
+            "type": "text",
+            "description": "URL for first featured category",
+            "default": "/categories/featured",
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_1_description",
+            "label": "Category 1 Description",
+            "type": "text",
+            "description": "Description for first featured category",
+            "default": "Discover our curated selection of premium pieces.",
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_2_name",
+            "label": "Category 2 Name",
+            "type": "text",
+            "description": "Name for second featured category",
+            "default": "Collection B",
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_2_link",
+            "label": "Category 2 Link",
+            "type": "text",
+            "description": "URL for second featured category",
+            "default": "/categories/featured",
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_2_description",
+            "label": "Category 2 Description",
+            "type": "text",
+            "description": "Description for second featured category",
+            "default": "Explore timeless designs crafted with care.",
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_3_name",
+            "label": "Category 3 Name",
+            "type": "text",
+            "description": "Name for third featured category",
+            "default": "Collection C",
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_3_link",
+            "label": "Category 3 Link",
+            "type": "text",
+            "description": "URL for third featured category",
+            "default": "/categories/featured",
+            "fieldset": "categories"
+        },
+        {
+            "id": "category_3_description",
+            "label": "Category 3 Description",
+            "type": "text",
+            "description": "Description for third featured category",
+            "default": "Find your perfect style in our latest collection.",
+            "fieldset": "categories"
+        },
+        {
+            "id": "atome_enabled",
+            "label": "Show Atome Payment Option",
+            "type": "boolean",
+            "description": "Display 'or 3 payments with Atome' below product price",
+            "default": false,
+            "fieldset": "theme"
+        },
+        {
+            "id": "cart_instruction",
+            "label": "Cart Instruction",
+            "type": "text",
+            "description": "Instruction text shown on cart page",
+            "fieldset": "theme"
+        },
+        {
+            "id": "company_id",
+            "label": "Company ID",
+            "type": "text",
+            "description": "Company registration number",
+            "default": "",
+            "fieldset": "footer"
+        },
+        {
+            "id": "facebook",
+            "label": "Facebook URL",
+            "type": "text",
+            "description": "Example: https://facebook.com/shoppego",
+            "default": "https://facebook.com/#",
+            "fieldset": "footer"
+        },
+        {
+            "id": "instagram",
+            "label": "Instagram URL",
+            "type": "text",
+            "description": "Example: https://instagram.com/shoppego",
+            "default": "https://instagram.com/#",
+            "fieldset": "footer"
+        },
+        {
+            "id": "twitter",
+            "label": "X (Twitter) URL",
+            "type": "text",
+            "description": "Example: https://x.com/shoppego",
+            "default": "https://x.com/#",
+            "fieldset": "footer"
+        },
+        {
+            "id": "tiktok",
+            "label": "TikTok URL",
+            "type": "text",
+            "description": "Example: https://tiktok.com/@shoppego",
+            "default": "https://tiktok.com/@#",
+            "fieldset": "footer"
+        },
+        {
+            "id": "youtube",
+            "label": "YouTube URL",
+            "type": "text",
+            "description": "Example: https://youtube.com/@shoppego",
+            "default": "https://youtube.com/@#",
+            "fieldset": "footer"
+        },
+        {
+            "id": "threads",
+            "label": "Threads URL",
+            "type": "text",
+            "description": "Example: https://threads.net/@shoppego",
+            "default": "https://threads.net/@#",
+            "fieldset": "footer"
+        },
+        {
+            "id": "custom_css",
+            "label": "Custom CSS style",
+            "type": "textarea",
+            "rows": 2,
+            "description": "Example : .footer { color:black; }",
+            "fieldset": "theme"
+        },
+        {
+            "id": "custom_meta",
+            "label": "Custom Meta Tags",
+            "type": "textarea",
+            "rows": 2,
+            "description": "Example: <meta name='google-site-verification' content='absDfGH-AbCDFgy_wQGCZ9ImAsaGRnBbpDfWnokyfGc'>",
+            "fieldset": "theme"
+        },
+        {
+            "id": "whatsapp_number",
+            "label": "WhatsApp Number",
+            "type": "text",
+            "description": "Phone number with country code (e.g., 60123456789). Leave empty to hide.",
+            "default": "",
+            "fieldset": "livechat"
+        },
+        {
+            "id": "whatsapp_heading",
+            "label": "Widget Heading",
+            "type": "text",
+            "description": "Heading text for the chat widget",
+            "default": "Got a question?",
+            "fieldset": "livechat"
+        },
+        {
+            "id": "whatsapp_description",
+            "label": "Widget Description",
+            "type": "text",
+            "description": "Description text below the heading",
+            "default": "Chat with us directly anytime. We'd love to hear from you.",
+            "fieldset": "livechat"
+        },
+        {
+            "id": "whatsapp_response_time",
+            "label": "Response Time Text",
+            "type": "text",
+            "description": "Status text showing response time",
+            "default": "We reply quickly during working hours",
+            "fieldset": "livechat"
+        },
+        {
+            "id": "whatsapp_button_text",
+            "label": "Button Text",
+            "type": "text",
+            "description": "Text for the WhatsApp chat button",
+            "default": "Chat on WhatsApp",
+            "fieldset": "livechat"
+        },
+        {
+            "id": "whatsapp_default_message",
+            "label": "Default Message",
+            "type": "text",
+            "description": "Pre-filled message when opening WhatsApp chat",
+            "default": "Hi, I have a question about",
+            "fieldset": "livechat"
+        },
+        {
+            "id": "messenger_username",
+            "label": "Messenger Username",
+            "type": "text",
+            "description": "Your Facebook page username without @ (e.g., shoppego). Leave empty to hide.",
+            "default": "",
+            "fieldset": "livechat"
+        },
+        {
+            "id": "instagram_username",
+            "label": "Instagram Username",
+            "type": "text",
+            "description": "Your Instagram username without @ (e.g., shoppego). Leave empty to hide.",
+            "default": "",
+            "fieldset": "livechat"
+        }
+    ],
+
+    "colors": [
+        {
+            "id": "accent_color",
+            "label": "Primary Color",
+            "default": "#000000",
+            "fieldset": "theme",
+            "description": "Color for buttons, announcement bar, and highlights. Text color remains unchanged."
+        }
+    ]
+}
