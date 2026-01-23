@@ -27,9 +27,9 @@
                 {% if category %}{{ category.name }}{% else %}Products{% endif %}
             </h1>
             {% if category and category.description %}
-            <p class="text-secondary text-center max-w-2xl mx-auto mb-8">
+            <div class="text-secondary text-center max-w-2xl mx-auto mb-8">
                 {{ category.description }}
-            </p>
+            </div>
             {% endif %}
             {% if not category %}
             <!-- Category Filter (only show on /products page, not on category pages) -->
