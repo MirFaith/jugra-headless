@@ -424,6 +424,14 @@
             "description": "Your Instagram username without @ (e.g., shoppego). Leave empty to hide.",
             "default": "",
             "fieldset": "livechat"
+        },
+        {
+            "id": "powered_by_shoppego",
+            "label": "Powered by Shoppego",
+            "type": "boolean",
+            "default": false,
+            "description": "Hide powered by Shoppego text",
+            "fieldset": "footer"
         }
     ],
 

@@ -909,10 +909,12 @@
                     <p>
                         &copy; {{ "now" | date("Y") }} {{ store.name }}{% if settings.options.company_id %} ({{ settings.options.company_id }}){% endif %}. All rights reserved.
                     </p>
+                    {% if settings.options.powered_by_shoppego != true %}
                     <a href="https://shoppego.com" target="_blank" rel="nofollow noopener" class="mt-2 inline-flex items-center justify-center group relative">
                         <span class="group-hover:opacity-0 group-hover:scale-75 transition-all duration-200">Powered by Shoppego</span>
                         <img src="https://img.shoppegram.com/system_setting/logo/vP0OFAdHYk7QIpDrv51y.svg" alt="Shoppego" class="h-5 absolute left-1/2 -translate-x-1/2 opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-110 transition-all duration-200 mt-3">
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
