@@ -13,3 +13,7 @@ Fixed category description to make sure it is in <div> element instead of <p> el
 ### Version 1.1.0
 
 Add settings to hide/show "Powered by Shoppego" text at the website footer. By default, it wil show the text.
+
+### Version 1.2.0
+
+Add contact page template
