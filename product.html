@@ -312,12 +312,16 @@
                                             <div class="grid grid-cols-2 gap-3">
                                                 {%- set optionSlideIndex = product.images | length -%}
                                                 {% for value in option.values %}
-                                                    {# Find matching variant to check availability and get variant image #}
-                                                    {%- set optionVariantAvailable = true -%}
+                                                    {# Mark the option available if AT LEAST ONE matching variant is in stock.
+                                                       Previously this overwrote on every match, so only the last variant's
+                                                       availability counted — causing in-stock combos to render as sold-out. #}
+                                                    {%- set optionVariantAvailable = false -%}
                                                     {%- set optionVariantImage = value.image -%}
                                                     {%- for variant in product.variants -%}
                                                         {%- if variant.options[option.name] == value.name -%}
-                                                            {%- set optionVariantAvailable = variant.available -%}
+                                                            {%- if variant.available -%}
+                                                                {%- set optionVariantAvailable = true -%}
+                                                            {%- endif -%}
                                                             {%- if variant.image and not optionVariantImage -%}
                                                                 {%- set optionVariantImage = variant.image -%}
                                                             {%- endif -%}

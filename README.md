@@ -17,3 +17,7 @@ Add settings to hide/show "Powered by Shoppego" text at the website footer. By d
 ### Version 1.2.0
 
 Add contact page template
+
+### Version 1.2.1
+
+Fixed option buttons should appear sold-out based on the currently-selected combination across all option groups.

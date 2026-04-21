@@ -729,11 +729,18 @@ $(document).ready(function() {
     // Button click is the variant (new button style)
     $('.select-variant-btn').on('click', function() {
         var btn = $(this);
+
+        // Block clicks on sold-out variants entirely
+        if (btn.attr('data-sold-out') === 'true') {
+            return;
+        }
+
         var variant_id = btn.data('variant-id');
         var selected_variant = $('#variant_' + variant_id);
 
-        // Update button active states - remove active state from all, add to clicked
-        $('.select-variant-btn:not([data-sold-out="true"])').removeClass('border-primary').addClass('border-secondary-border');
+        // Update button active states — remove from ALL siblings so previously-active buttons
+        // that turn sold-out also lose their border.
+        $('.select-variant-btn').removeClass('border-primary').addClass('border-secondary-border');
         $('.select-variant-btn .variant-active-indicator').addClass('hidden');
         btn.removeClass('border-secondary-border').addClass('border-primary');
         btn.find('.variant-active-indicator').removeClass('hidden');
@@ -793,13 +800,67 @@ $(document).ready(function() {
     });
 
     // Button click is the option (new button style)
+    // Recompute which option buttons should appear sold-out based on the
+    // currently-selected combination across all option groups.
+    function refreshOptionAvailability() {
+        var variants = document.querySelectorAll('#list-variants-options > div');
+        if (variants.length === 0) return;
+
+        // Snapshot current selections (only filled ones)
+        var currentSelections = {};
+        document.querySelectorAll('#variants_options .selected-option-value').forEach(function(input) {
+            var key = input.getAttribute('name');
+            var val = input.value;
+            if (val) currentSelections[key] = val;
+        });
+
+        document.querySelectorAll('.select-option-btn').forEach(function(btn) {
+            var optionName = btn.getAttribute('data-option-name');
+            var optionValue = btn.getAttribute('data-option-value');
+
+            // Hypothetical: combine current selections with this button's value
+            var hypothetical = Object.assign({}, currentSelections);
+            hypothetical[optionName] = optionValue;
+
+            var isAvailable = false;
+            variants.forEach(function(v) {
+                if (v.getAttribute('data-available') !== 'true') return;
+                var matches = true;
+                v.querySelectorAll('input[data-optionkey]').forEach(function(input) {
+                    var key = input.getAttribute('data-optionkey');
+                    if (hypothetical[key] && input.value !== hypothetical[key]) {
+                        matches = false;
+                    }
+                });
+                if (matches) isAvailable = true;
+            });
+
+            if (isAvailable) {
+                btn.removeAttribute('data-sold-out');
+                btn.classList.remove('opacity-30', 'cursor-not-allowed');
+            } else {
+                btn.setAttribute('data-sold-out', 'true');
+                btn.classList.add('opacity-30', 'cursor-not-allowed');
+            }
+        });
+    }
+
+    // Initial pass on page load (covers cases the template missed)
+    refreshOptionAvailability();
+
     $('.select-option-btn').on('click', function() {
         var btn = $(this);
         var optionValue = btn.data('option-value');
-        var isSoldOut = btn.data('sold-out') === true;
+        var isSoldOut = btn.attr('data-sold-out') === 'true';
+
+        // Block clicks on sold-out options entirely
+        if (isSoldOut) {
+            return;
+        }
 
         // Update button active states within the same option group - remove active state from all, add to clicked
-        btn.closest('.grid').find('.select-option-btn:not([data-sold-out="true"])').removeClass('border-primary').addClass('border-secondary-border');
+        // (including sold-out ones, otherwise a previously-active button that later goes sold-out keeps its border).
+        btn.closest('.grid').find('.select-option-btn').removeClass('border-primary').addClass('border-secondary-border');
         btn.closest('.grid').find('.select-option-btn .option-active-indicator').addClass('hidden');
         btn.removeClass('border-secondary-border').addClass('border-primary');
         btn.find('.option-active-indicator').removeClass('hidden');
@@ -813,6 +874,9 @@ $(document).ready(function() {
 
         // Update the hidden input for this option (even if sold out, so price updates)
         btn.closest('.mb-4').find('.selected-option-value').val(optionValue);
+
+        // Recompute sold-out state for sibling option buttons based on the new selection
+        refreshOptionAvailability();
 
         // Check if all options have been selected
         // Count total number of option groups (e.g., "Colour", "Size")
