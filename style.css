@@ -4,8 +4,8 @@ Theme Name: Jugra
 Theme Description: A minimalist e-commerce theme for artisan brand
 Theme Author: Lutfi Azhar
 Updated By: Amirul Amri
-Version : 1.2.1
-Last update : 21 April 2026
+Version : 1.3.0
+Last update : 12 May 2026
 
 ***/
 
@@ -92,6 +92,15 @@ select.single-option-selector__select.select-option:focus {
 /* SVG Placeholder styling */
 svg.placeholder-svg {
     border: 1px solid #eee;
+}
+
+.broken-product-image {
+    display: block;
+}
+
+.broken-product-image svg {
+    width: 100%;
+    height: 100%;
 }
 
 /* Smooth scroll behavior */

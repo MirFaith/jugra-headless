@@ -672,6 +672,80 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
+function createProductImagePlaceholder() {
+    var template = document.getElementById('broken-product-image-placeholder'),
+        wrapper = document.createElement('span');
+
+    wrapper.className = 'broken-product-image';
+
+    if (template) {
+        wrapper.innerHTML = template.innerHTML;
+    }
+
+    return wrapper;
+}
+
+function replaceBrokenProductImage(img) {
+    var placeholder;
+
+    if (!img || img.dataset.placeholderApplied === 'true') {
+        return;
+    }
+
+    img.dataset.placeholderApplied = 'true';
+    placeholder = createProductImagePlaceholder();
+
+    if (img.id) {
+        placeholder.id = img.id;
+    }
+
+    if (img.className) {
+        placeholder.className += ' ' + img.className;
+    }
+
+    if (img.getAttribute('width')) {
+        placeholder.style.width = img.getAttribute('width');
+    }
+
+    if (img.parentNode) {
+        img.parentNode.replaceChild(placeholder, img);
+    }
+}
+
+function getProductImageSelector(){
+    return [
+        '.product-images img',
+        '.carousel-slide img',
+        '.carousel-thumb img',
+        '.product-image img',
+        '.bundle-thumbnail img',
+        '.cart-item img',
+        '.grid .group img'
+    ].join(', ');
+}
+
+function initProductImageFallbacks() {
+    document.addEventListener('error', function(event) {
+        var target = event.target;
+
+        if (target && target.tagName === 'IMG' && target.matches(getProductImageSelector())) {
+            replaceBrokenProductImage(target);
+        }
+    }, true);
+
+    document.querySelectorAll(getProductImageSelector()).forEach(function(img) {
+        if (img.complete && img.naturalWidth === 0) {
+            replaceBrokenProductImage(img);
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initProductImageFallbacks);
+} else {
+    initProductImageFallbacks();
+}
+
 $(document).ready(function() {
 
     // iOS Safari bfcache fix: Re-sync form state when page is restored from cache
@@ -809,7 +883,7 @@ $(document).ready(function() {
         // Snapshot current selections (only filled ones)
         var currentSelections = {};
         document.querySelectorAll('#variants_options .selected-option-value').forEach(function(input) {
-            var key = input.getAttribute('name');
+            var key = input.getAttribute('data-option-key') || input.getAttribute('name');
             var val = input.value;
             if (val) currentSelections[key] = val;
         });
@@ -860,8 +934,8 @@ $(document).ready(function() {
 
         // Update button active states within the same option group - remove active state from all, add to clicked
         // (including sold-out ones, otherwise a previously-active button that later goes sold-out keeps its border).
-        btn.closest('.grid').find('.select-option-btn').removeClass('border-primary').addClass('border-secondary-border');
-        btn.closest('.grid').find('.select-option-btn .option-active-indicator').addClass('hidden');
+        btn.closest('.option-value-group').find('.select-option-btn').removeClass('border-primary').addClass('border-secondary-border');
+        btn.closest('.option-value-group').find('.select-option-btn .option-active-indicator').addClass('hidden');
         btn.removeClass('border-secondary-border').addClass('border-primary');
         btn.find('.option-active-indicator').removeClass('hidden');
 
@@ -891,7 +965,7 @@ $(document).ready(function() {
         if(totalOptionGroups == selectedOptionsLength) {
             selectedInputs.each(function(){
                 var input = $(this);
-                var key = input.attr('name');
+                var key = input.data('option-key') || input.attr('name');
                 var value = input.val();
                 selectedOptions[key] = value;
             });
@@ -931,6 +1005,106 @@ $(document).ready(function() {
     // Quantity input box is on type in value
     $('#product_input_quantity').on('keyup', function(event){
         inputQuantity(event);
+    });
+
+    if($('#product-bundle-form').length){
+        enableButtons();
+    }
+
+    window.addEventListener('pageshow', function(){
+        if($('#product-bundle-form').length){
+            enableButtons();
+        }
+    });
+
+    // Bundle selection
+    $('.single-bundle-selector__select.select-bundle').on('change', function(){
+        var variantId = $(this).val(),
+            productInput = $(this).siblings('input[name$="[product_id]"]'),
+            productId = productInput.val(),
+            loopId = productInput.data('loop'),
+            selectedVariant = $('#variant_' + variantId + '_' + loopId);
+
+        updateSelectedBundleVariant(productId, variantId, loopId);
+        updateBundleAvailabilityText(productId, variantId, loopId);
+        resetBundleInputQuantity(productId, 0, loopId);
+        checkBundleSelect(productId, loopId);
+        updateBundleThumbnailImage(productId, variantId, loopId);
+        updateBundleFixQuantity(productId, variantId, loopId);
+        updateBundlePriceText(productId, variantId, loopId);
+
+        if(selectedVariant.data('available')){
+            resetBundleInputQuantity(productId, 1, loopId);
+            updateBundlePriceText(productId, variantId, loopId);
+            if(validateBundleSelections($('#product-bundle-form'))){
+                hideProductOptionAlert($('#product-bundle-form'));
+            }
+        }
+
+        enableButtons();
+        $(this).removeClass('border-red-500');
+    });
+
+    // Bundle plus quantity on click
+    $('.bundle-quantity-button.bundle-plus').on('click', function(){
+        var productId = $(this).data('product-id'),
+            loopId = $(this).data('loop'),
+            selectedProductVariant = $('#product_bundle_' + productId + '_variant_' + loopId).val(),
+            selectedVariant = $('#variant_' + selectedProductVariant + '_' + loopId);
+
+        if(!selectedProductVariant){
+            showProductOptionAlert($('#product-bundle-form'), 'Please select product variation first');
+            return;
+        }
+
+        updateBundleAvailabilityText(productId, selectedProductVariant, loopId);
+        checkBundleSelect(productId, loopId);
+
+        if(!selectedVariant.data('available')){
+            return;
+        }
+
+        hideProductOptionAlert($('#product-bundle-form'));
+        plusBundleQuantity(productId, loopId);
+    });
+
+    // Bundle minus quantity on click
+    $('.bundle-quantity-button.bundle-minus').on('click', function(){
+        var productId = $(this).data('product-id'),
+            loopId = $(this).data('loop'),
+            selectedProductVariant = $('#product_bundle_' + productId + '_variant_' + loopId).val(),
+            selectedVariant = $('#variant_' + selectedProductVariant + '_' + loopId);
+
+        if(!selectedProductVariant){
+            showProductOptionAlert($('#product-bundle-form'), 'Please select product variation first');
+            return;
+        }
+
+        updateBundleAvailabilityText(productId, selectedProductVariant, loopId);
+        checkBundleSelect(productId, loopId);
+
+        if(!selectedVariant.data('available')){
+            return;
+        }
+
+        hideProductOptionAlert($('#product-bundle-form'));
+        minusBundleQuantity(productId, loopId);
+    });
+
+    // Bundle quantity input box is on type in value
+    $('.bundle-quantity-button.bundle-quantity-form').on('keyup', function(){
+        var productId = $(this).data('product-id'),
+            loopId = $(this).data('loop'),
+            selectedProductVariant = $('#product_bundle_' + productId + '_variant_' + loopId).val(),
+            selectedVariant = $('#variant_' + selectedProductVariant + '_' + loopId);
+
+        updateBundleAvailabilityText(productId, selectedProductVariant, loopId);
+        checkBundleSelect(productId, loopId);
+
+        if(selectedVariant.data('available')){
+            hideProductOptionAlert($('#product-bundle-form'));
+            inputBundleQuantity(productId, loopId);
+        }
     });
 
 	// Populate search input with current search query and filter products
@@ -1046,15 +1220,42 @@ function processSelectOptions(selectedObject){
 }
 
 function updateSelectedOptionsVariant(selectedVariant){
-    $('input#selected-option[name="id"]').val(selectedVariant.data('variant'));
+    var variantId = (typeof selectedVariant === 'object') ? selectedVariant.data('variant') : selectedVariant;
+    $('input#selected-option[name="id"]').attr('value', variantId);
+    $('input#selected-option[name="id"]').val(variantId);
+}
+
+function updateSelectedBundleVariant(productId, variantId, loopId){
+    $('input#product_bundle_' + productId + '_variant_' + loopId).attr('value', variantId);
+    $('input#product_bundle_' + productId + '_variant_' + loopId).val(variantId);
+}
+
+function parseMoneyValue(formattedPrice){
+    if (!formattedPrice) return 0;
+    return parseFloat(String(formattedPrice).replace(/^\D+/g, '').replace(/,/g, '')) || 0;
+}
+
+function getMoneyCurrency(formattedPrice, fallback){
+    var match = formattedPrice ? String(formattedPrice).match(/^\D+/g) : null;
+    return match ? match[0] : (fallback || '');
+}
+
+function formatMoneyValue(amount, currencyType, fixedSize){
+    var formatted = Number(amount || 0).toFixed(fixedSize);
+    if(parseFloat(amount || 0) >= 1000){
+        formatted = formatted.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    return currencyType + formatted;
 }
 
 function updatePriceText(variantId = null){
     var selectedVariant = $('#variant_' + $('#selected-option').val()),
         currentQuantity = $('#product_input_quantity').val(),
+        wholesaleInput = $('input[id^="wholesalePrice_"]'),
         formattedProductPrice, formattedDiscountPrice,
         formattedTotalPrice, formattedTotalDiscountPrice, productPrice, discountPrice,
-        productPriceElement, discountPriceElement, currencyType, totalPrice = 0, totalDiscountPrice = 0;
+        productPriceElement, discountPriceElement, currencyType, storeCurrency, fixedSize,
+        totalPrice = 0, totalDiscountPrice = 0;
 
         // override if variantId not null
     if(variantId){
@@ -1064,34 +1265,57 @@ function updatePriceText(variantId = null){
     formattedProductPrice = selectedVariant.data('price');
     formattedDiscountPrice = selectedVariant.data('discount-price');
 
-    currencyType = formattedProductPrice.match(/^\D+/g)[0];
-    productPrice = formattedProductPrice.replace(/[^0-9.]/g, '');
-
-    // Only extract discount price if it exists and has valid format
-    if (formattedDiscountPrice && formattedDiscountPrice.toString().match(/^\D+/g)) {
-        discountPrice = formattedDiscountPrice.replace(/[^0-9.]/g, '');
-    } else {
-        discountPrice = '0.00';
+    if(!formattedProductPrice){
+        return;
     }
 
     // if input quantity box not exist, set default to 1
-    currentQuantity = currentQuantity? currentQuantity : 1;
+    currentQuantity = parseInt(currentQuantity, 10) || 1;
+
+    currencyType = getMoneyCurrency(formattedProductPrice);
+
+    if(wholesaleInput.length >= 1){
+        wholesaleInput.each(function(){
+            var minQuantity = parseInt($(this).data('min-quantity'), 10) || 0,
+                maxQuantity = parseInt($(this).data('max-quantity'), 10),
+                maxApplies = !maxQuantity || currentQuantity <= maxQuantity;
+
+            if(currentQuantity >= minQuantity && maxApplies){
+                formattedProductPrice = $(this).data('price');
+                currencyType = $(this).data('currency') || getMoneyCurrency(formattedProductPrice, currencyType);
+                return false;
+            }
+        });
+    }
+
+    currencyType = currencyType || getMoneyCurrency(formattedProductPrice);
+    productPrice = parseMoneyValue(formattedProductPrice);
+
+    // Only extract discount price if it exists and has valid format
+    if (formattedDiscountPrice && formattedDiscountPrice.toString().match(/^\D+/g)) {
+        discountPrice = parseMoneyValue(formattedDiscountPrice);
+    } else {
+        discountPrice = 0;
+    }
+
+    storeCurrency = $('#product-price').data('currency');
+    fixedSize = (storeCurrency === 'IDR') ? 0 : 2;
 
     productPriceElement = $('#product-price');
     discountPriceElement = $('#discount-price-single');
 
     totalPrice = productPrice * currentQuantity;
-    formattedTotalPrice = currencyType + totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    formattedTotalPrice = formatMoneyValue(totalPrice, currencyType, fixedSize);
 
     // Set the price
     productPriceElement.text(formattedTotalPrice);
 
     // If variant is available and have discount price, calculate and display it
-    if(selectedVariant.data('available') && formattedDiscountPrice && discountPrice !== '0.00'){
+    if(selectedVariant.data('available') && formattedDiscountPrice && discountPrice > 0){
         totalDiscountPrice = discountPrice * currentQuantity;
-        formattedTotalDiscountPrice = currencyType + totalDiscountPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        formattedTotalDiscountPrice = formatMoneyValue(totalDiscountPrice, currencyType, fixedSize);
         discountPriceElement.text(formattedTotalDiscountPrice);
-        discountPriceElement.show();
+        discountPriceElement.removeClass('hidden').show();
     } else {
         discountPriceElement.text('');
         discountPriceElement.hide();
@@ -1100,9 +1324,7 @@ function updatePriceText(variantId = null){
     // Update Atome price (divide by 3)
     var atomePriceElement = $('#atome-price');
     if (atomePriceElement.length > 0) {
-        var atomePrice = (totalPrice / 3).toFixed(2);
-        var formattedAtomePrice = currencyType + parseFloat(atomePrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        atomePriceElement.text(formattedAtomePrice);
+        atomePriceElement.text(formatMoneyValue(totalPrice / 3, currencyType, fixedSize));
     }
 }
 
@@ -1114,14 +1336,18 @@ function enableButtons(){
         text = (btn).is('#btn-buynow')? 'Buy now' : 'Add to cart';
 
         btn.removeAttr('disabled', 'disabled');
-        btn.text(''); // clear first
 
         {% if settings.options.btn_buy_now_text %}
         // override from settings
         text = (btn).is('#btn-buynow')?  '{{ settings.options.btn_buy_now_text }}' : text;
         {% endif %}
 
-        btn.html(text);
+        if(btn.is('#btn-buynow') && btn.find('#buynow-text').length){
+            btn.find('#buynow-spinner').addClass('hidden');
+            btn.find('#buynow-text').text(text);
+        }else{
+            btn.html(text);
+        }
     });
 
     // Re-enable quantity selector
@@ -1136,7 +1362,12 @@ function disabledButtons(){
         btn = $(this);
 
         btn.attr('disabled', 'disabled');
-        btn.text('Sold out');
+        if(btn.is('#btn-buynow') && btn.find('#buynow-text').length){
+            btn.find('#buynow-spinner').addClass('hidden');
+            btn.find('#buynow-text').text('Sold out');
+        }else{
+            btn.text('Sold out');
+        }
     });
 }
 
@@ -1258,6 +1489,278 @@ function inputQuantity(event){
     updatePriceText();
 }
 
+function disabledBundleButtons(){
+    $("#btn-buynow, #btn-add-to-cart").attr('disabled', 'disabled');
+}
+
+function updateBundleAvailabilityText(productId, variantId, loopId){
+    var row = $('#row_' + productId + '_' + loopId),
+        span = row.find('#bundle_availability_' + variantId + '_' + loopId),
+        selectedVariant = $('#variant_' + variantId + '_' + loopId),
+        availability = selectedVariant.data('available');
+
+    row.find('[id^="bundle_availability_"]').addClass('hidden');
+    if(variantId && !availability){
+        span.removeClass('hidden');
+    }
+}
+
+function updateBundleFixQuantity(productId, variantId, loopId){
+    var selectedBundleRow = $('#row_' + productId + '_' + loopId),
+        selectedVariant = $('#variant_' + variantId + '_' + loopId),
+        selectedFixQuantityElement = $('#fixed_quantity_' + loopId),
+        bundleFixQuantity = selectedVariant.data('fixed-quantity');
+
+    if(bundleFixQuantity === '' || bundleFixQuantity == null || typeof bundleFixQuantity === 'undefined'){
+        selectedFixQuantityElement.addClass('hidden').text('');
+        $('input[name="bundle_products[' + loopId + '][product_id]"]').parent('.bundle-variants').addClass('mb-3');
+
+        if(!variantId){
+            selectedBundleRow.find('.input-quantity').addClass('hidden');
+        }else{
+            selectedBundleRow.find('.input-quantity').removeClass('hidden');
+        }
+    }else{
+        selectedFixQuantityElement.removeClass('hidden').text(bundleFixQuantity);
+        $('input[name="bundle_products[' + loopId + '][product_id]"]').parent('.bundle-variants').removeClass('mb-3');
+        selectedBundleRow.find('.input-quantity').addClass('hidden');
+    }
+}
+
+function updateBundleThumbnailImage(productId, variantId, loopId){
+    var selectedProductBundleImage = $('#img_bundle_' + productId + '_' + loopId),
+        selectedVariantBundleImage = $('#img_bundle_' + variantId + '_' + loopId);
+
+    if(!variantId){
+        variantId = $('#product_bundle_' + productId + '_variant_' + loopId).val();
+        selectedVariantBundleImage = $('#img_bundle_' + variantId + '_' + loopId);
+    }
+
+    var rowElement = $('#row_' + productId + '_' + loopId),
+        bundleThumbnailElement = rowElement.find('.bundle-thumbnail').find('[id^="img_bundle_"]'),
+        selectedVariant = $('#variant_' + variantId + '_' + loopId),
+        image = selectedVariant.data('image');
+
+    bundleThumbnailElement.addClass('hidden');
+    rowElement.find('[id^="img_bundle_empty_"]').addClass('hidden');
+
+    if(!image){
+        var selectedEmptyImage = $('#img_bundle_empty_' + variantId + '_' + loopId);
+        selectedProductBundleImage.removeClass('hidden');
+        selectedEmptyImage.removeClass('hidden');
+    }else{
+        selectedVariantBundleImage.removeClass('hidden');
+    }
+}
+
+function isUnlimitedBundleVariant(productId, loopId){
+    var variantId = $('#product_bundle_' + productId + '_variant_' + loopId).val(),
+        selectedVariant = $('#variant_' + variantId + '_' + loopId),
+        isManageStock = selectedVariant.data('manage-stock');
+
+    return !isManageStock;
+}
+
+function checkBundleSelect(productId, loopId){
+    var inputQuantityBox = $('input[data-product-id="' + productId + '"][data-loop="' + loopId + '"]'),
+        buttonPlus = $('.bundle-plus[data-product-id="' + productId + '"][data-loop="' + loopId + '"]'),
+        buttonMinus = $('.bundle-minus[data-product-id="' + productId + '"][data-loop="' + loopId + '"]'),
+        inputProductId = $('.bundle-variants').find('input[value="' + productId + '"][data-loop="' + loopId + '"]').val(),
+        selectBundleVariants = $('.bundle-variants').find('input[value="' + productId + '"][data-loop="' + loopId + '"]').next('select').val(),
+        selectedVariant = $('#variant_' + selectBundleVariants + '_' + loopId),
+        available = false;
+
+    if(typeof selectBundleVariants === 'undefined'){
+        selectBundleVariants = $('#product_bundle_' + productId + '_variant_' + loopId).val();
+        selectedVariant = $('#variant_' + selectBundleVariants + '_' + loopId);
+    }
+
+    if(selectBundleVariants !== ''){
+        available = selectedVariant.data('available');
+    }
+
+    if((selectBundleVariants === '' && inputProductId === '') || available === false){
+        buttonPlus.addClass('disabled opacity-50 cursor-not-allowed').attr('disabled', 'disabled');
+        buttonMinus.addClass('disabled opacity-50 cursor-not-allowed').attr('disabled', 'disabled');
+        inputQuantityBox.prop('readonly', true).prop('disabled', false);
+    }else{
+        buttonPlus.removeClass('disabled opacity-50 cursor-not-allowed').removeAttr('disabled');
+        buttonMinus.removeClass('disabled opacity-50 cursor-not-allowed').removeAttr('disabled');
+        inputQuantityBox.prop('readonly', false).prop('disabled', false);
+    }
+}
+
+function resetBundleInputQuantity(productId, value = 1, loopId){
+    var inputQuantityBox = $('input[data-product-id="' + productId + '"][data-loop="' + loopId + '"]');
+
+    inputQuantityBox.attr('value', value);
+    inputQuantityBox.val(value);
+}
+
+function plusBundleQuantity(productId, loopId){
+    var inputQuantityBox = $('input[data-product-id="' + productId + '"][data-loop="' + loopId + '"]'),
+        currentValue = parseInt(inputQuantityBox.attr('value'), 10) || 0,
+        selectedProductVariant = $('#product_bundle_' + productId + '_variant_' + loopId).val(),
+        selectedVariant = $('#variant_' + selectedProductVariant + '_' + loopId),
+        maxValue = parseInt(selectedVariant.data('inventory-quantity'), 10) || 0,
+        newValue = currentValue + 1,
+        isUnlimited = isUnlimitedBundleVariant(productId, loopId);
+
+    if(newValue <= maxValue || isUnlimited){
+        inputQuantityBox.attr('value', newValue).val(newValue);
+    }else{
+        inputQuantityBox.attr('value', maxValue).val(maxValue);
+    }
+
+    updateBundlePriceText(productId, selectedProductVariant, loopId);
+}
+
+function minusBundleQuantity(productId, loopId){
+    var inputQuantityBox = $('input[data-product-id="' + productId + '"][data-loop="' + loopId + '"]'),
+        currentValue = parseInt(inputQuantityBox.attr('value'), 10) || 1,
+        selectedProductVariant = $('#product_bundle_' + productId + '_variant_' + loopId).val(),
+        newValue = currentValue - 1;
+
+    if(newValue >= 1){
+        inputQuantityBox.attr('value', newValue).val(newValue);
+    }
+
+    updateBundlePriceText(productId, selectedProductVariant, loopId);
+}
+
+function inputBundleQuantity(productId, loopId){
+    var inputQuantityBox = $('input[data-product-id="' + productId + '"][data-loop="' + loopId + '"]'),
+        selectedProductVariant = $('#product_bundle_' + productId + '_variant_' + loopId).val(),
+        selectedVariant = $('#variant_' + selectedProductVariant + '_' + loopId),
+        maxValue = parseInt(selectedVariant.data('inventory-quantity'), 10) || 0,
+        inputValue = inputQuantityBox.val().replace(/[^0-9\.]/g, ''),
+        isUnlimited = isUnlimitedBundleVariant(productId, loopId);
+
+    inputValue = parseInt(inputValue, 10) || 1;
+
+    if(inputValue <= maxValue || isUnlimited){
+        inputQuantityBox.attr('value', inputValue).val(inputValue);
+    }else{
+        inputQuantityBox.attr('value', maxValue).val(maxValue);
+    }
+
+    updateBundlePriceText(productId, selectedProductVariant, loopId);
+}
+
+function calculateTotalVisibleComparePrice(){
+    var bundlesComparePrice = 0;
+
+    $('.single-bundle-selector__select.select-bundle').each(function(){
+        var bundleVariant = $(this).val(),
+            loopId = $(this).prev().data('loop'),
+            selectedBundleVariant = $('#variant_' + bundleVariant + '_' + loopId),
+            bundleVariantDiscPrice = selectedBundleVariant.data('discount-price');
+
+        if(!bundleVariantDiscPrice){
+            selectedBundleVariant = $('#variant_' + $(this).find('option:nth-child(2)').val() + '_' + loopId);
+            bundleVariantDiscPrice = selectedBundleVariant.data('discount-price');
+        }
+
+        var currentBundleQuantity = $('input[data-product-id="' + selectedBundleVariant.parent().data('product-id') + '"][data-loop="' + loopId + '"].bundle-quantity-form').val() || 1;
+        bundlesComparePrice += parseMoneyValue(bundleVariantDiscPrice) * currentBundleQuantity;
+    });
+
+    return bundlesComparePrice;
+}
+
+function calculateTotalVisiblePrice(){
+    var bundlePriceTotal = 0;
+
+    $('.single-bundle-selector__select.select-bundle').each(function(){
+        var bundleVariant = $(this).val(),
+            loopId = $(this).prev().data('loop'),
+            selectedBundleVariant = $('#variant_' + bundleVariant + '_' + loopId),
+            bundleVariantPrice = selectedBundleVariant.data('price');
+
+        if(!bundleVariantPrice){
+            selectedBundleVariant = $('#variant_' + $(this).find('option:nth-child(2)').val() + '_' + loopId);
+            bundleVariantPrice = selectedBundleVariant.data('price');
+        }
+
+        var currentBundleQuantity = $('input[data-product-id="' + selectedBundleVariant.parent().data('product-id') + '"][data-loop="' + loopId + '"].bundle-quantity-form').val() || 1;
+        bundlePriceTotal += parseMoneyValue(bundleVariantPrice) * currentBundleQuantity;
+    });
+
+    return bundlePriceTotal;
+}
+
+function calculateSavedPrice(){
+    return calculateTotalVisibleComparePrice() - calculateTotalVisiblePrice();
+}
+
+function updateBundlePriceText(productId, bundleVariantId = null, loopId){
+    var selectedVariantId = bundleVariantId || $('#product_bundle_' + productId + '_variant_' + loopId).val(),
+        selectedVariant = $('#variant_' + selectedVariantId + '_' + loopId),
+        selectedBundlePriceVariantElement = $(document.getElementById(selectedVariantId + '_' + loopId)),
+        inputQuantityBox = $('input[data-product-id="' + productId + '"][data-loop="' + loopId + '"]'),
+        currentQuantity = parseInt(inputQuantityBox.attr('value'), 10) || parseInt(inputQuantityBox.val(), 10) || 1,
+        formattedBundlePrice = selectedVariant.data('price'),
+        formattedBundleDiscountPrice = selectedVariant.data('discount-price'),
+        currencyType = getMoneyCurrency(formattedBundlePrice),
+        storeCurrency = $('#product-price').data('currency'),
+        fixedSize = (storeCurrency === 'IDR') ? 0 : 2,
+        bundlePrice = parseMoneyValue(formattedBundlePrice),
+        bundleDiscountPrice = parseMoneyValue(formattedBundleDiscountPrice),
+        totalBundlePrice = bundlePrice * currentQuantity,
+        totalBundleDiscountPrice = bundleDiscountPrice * currentQuantity,
+        totalBundlesPrice = calculateTotalVisiblePrice(),
+        totalBundleComparePrice = calculateTotalVisibleComparePrice(),
+        totalBundlesSavedPrice = totalBundleComparePrice - totalBundlesPrice,
+        totalBundleSavedPrice = totalBundleDiscountPrice - totalBundlePrice,
+        bundlePriceElement = $('#bundle-price_' + selectedVariantId + '_' + loopId),
+        bundleDiscountPriceElement = $('#bundle-discount-price-single_' + selectedVariantId + '_' + loopId),
+        bundlesSavedPriceElement = $('#bundle-saved-price'),
+        bundleSavedPriceElement = $('#bundle-saved-price_' + selectedVariantId + '_' + loopId);
+
+    if(!formattedBundlePrice){
+        return;
+    }
+
+    $('.bundle-price-variants[data-loop="' + loopId + '"]').addClass('hidden').removeClass('block');
+    $('.bundle-saved-price-variant[data-loop="' + loopId + '"]').addClass('hidden').removeClass('block');
+    selectedBundlePriceVariantElement.removeClass('hidden').addClass('block');
+
+    if(totalBundlesSavedPrice < 0){
+        totalBundlesSavedPrice = 0;
+    }
+
+    if(totalBundleSavedPrice <= 0){
+        bundleSavedPriceElement.addClass('hidden');
+        bundleDiscountPriceElement.addClass('hidden');
+    }else{
+        bundleSavedPriceElement.removeClass('hidden').addClass('block').text('(Save ' + formatMoneyValue(totalBundleSavedPrice, currencyType, fixedSize) + ')');
+        bundleDiscountPriceElement.removeClass('hidden');
+    }
+
+    if(totalBundlesSavedPrice <= 0){
+        bundlesSavedPriceElement.text('Grab This Amazing Bundle Now!');
+    }else{
+        bundlesSavedPriceElement.html('<b>Save ' + formatMoneyValue(totalBundlesSavedPrice, currencyType, fixedSize) + '</b> With This Bundle!');
+    }
+
+    $('#product-price').text(formatMoneyValue(totalBundlesPrice, currencyType, fixedSize));
+    if(totalBundleComparePrice > totalBundlesPrice){
+        $('#discount-price-single').text(formatMoneyValue(totalBundleComparePrice, currencyType, fixedSize)).removeClass('hidden').show();
+    }else{
+        $('#discount-price-single').text('').hide();
+    }
+
+    if($('#atome-price').length > 0){
+        $('#atome-price').text(formatMoneyValue(totalBundlesPrice / 3, currencyType, fixedSize));
+    }
+
+    bundlePriceElement.text(formatMoneyValue(totalBundlePrice, currencyType, fixedSize));
+
+    if(formattedBundleDiscountPrice && totalBundleDiscountPrice > totalBundlePrice){
+        bundleDiscountPriceElement.text(formatMoneyValue(totalBundleDiscountPrice, currencyType, fixedSize));
+    }
+}
+
 // Handle Add to Cart button - intercept form submission and open cart drawer
 $(document).on('click touchend', '#btn-add-to-cart', function(e) {
     // Prevent double-firing from both touch and click events
@@ -1271,68 +1774,292 @@ $(document).on('click touchend', '#btn-add-to-cart', function(e) {
     handleAddToCart.call(this, e);
 });
 
-function handleAddToCart(e) {
-    e.preventDefault();
+function isBundleForm(form){
+    var action = form.attr('action') || '';
+    return form.is('#product-bundle-form') || action.indexOf('/bundle') !== -1 || action.indexOf('cart/add/bundle') !== -1;
+}
 
-    // Check if option selection is required (product has variant options)
-    var hasVariantOptions = $('#variants_options').length > 0;
+function validateBundleSelections(form){
+    var formScope = form && form.length ? form : $(document),
+        bundleSelects = formScope.find('.single-bundle-selector__select.select-bundle'),
+        invalidBundleNames = [],
+        isValid = true;
 
-    // Use native DOM for more reliable reads on iOS Safari
-    var selectedOptionInput = document.getElementById('selected-option');
-    var selectedOptionValue = selectedOptionInput ? selectedOptionInput.value : '';
-
-    // iOS Safari bfcache fix: If variant should be selected but hidden input is empty,
-    // try to re-sync from visually selected buttons (CSS classes survive bfcache)
-    if (hasVariantOptions && (!selectedOptionValue || selectedOptionValue === '')) {
-        var totalOptionGroups = $('#variants_options').find('.selected-option-value').length;
-        var selectedButtons = $('#variants_options').find('.select-option-btn.border-primary');
-
-        // Only attempt re-sync if ALL option groups have a visually selected button
-        if (selectedButtons.length === totalOptionGroups && totalOptionGroups > 0) {
-            var selectedOptions = {};
-            var allValid = true;
-
-            selectedButtons.each(function() {
-                var btn = $(this);
-                var optionName = btn.data('option-name');
-                var optionValue = btn.data('option-value');
-                if (optionName && optionValue) {
-                    btn.closest('.mb-4').find('.selected-option-value').val(optionValue);
-                    selectedOptions[optionName] = optionValue;
-                } else {
-                    allValid = false;
-                }
-            });
-
-            // Re-process to update #selected-option with correct variant ID
-            if (allValid && Object.keys(selectedOptions).length === totalOptionGroups) {
-                processSelectOptions(selectedOptions);
-                // Re-read the value after processing using native DOM
-                selectedOptionValue = document.getElementById('selected-option').value;
-            }
-        }
+    if(bundleSelects.length === 0){
+        return true;
     }
 
-    if (hasVariantOptions && (!selectedOptionValue || selectedOptionValue === '')) {
-        // Show alert
-        var optionAlert = $('#option-alert');
-        optionAlert.removeClass('hidden');
-        // Scroll to alert
+    bundleSelects.removeClass('border-red-500');
+
+    bundleSelects.each(function(){
+        var select = $(this),
+            variantId = select.val(),
+            productInput = select.prev('input[name$="[product_id]"]'),
+            loopId = productInput.data('loop'),
+            selectedVariant = $('#variant_' + variantId + '_' + loopId),
+            bundleName = select.data('bundle-name') || select.closest('[id^="row_"]').find('h3').first().text().trim() || 'bundle product';
+
+        if(!variantId || !selectedVariant.data('available')){
+            isValid = false;
+            invalidBundleNames.push(bundleName);
+            select.addClass('border-red-500');
+            return false;
+        }
+    });
+
+    if(!isValid){
+        showProductOptionAlert(formScope, 'Please select product variation for ' + invalidBundleNames[0] + ' first');
+    }else{
+        formScope.find('#option-alert').addClass('hidden');
+    }
+
+    return isValid;
+}
+
+function serializeAddToCartForm(form, submitter){
+    var formDataArray = form.serializeArray();
+
+    if(submitter && submitter.name){
+        formDataArray.push({
+            name: submitter.name,
+            value: submitter.value || ''
+        });
+    }
+
+    return $.param(formDataArray);
+}
+
+function reloadWithCartDrawer(){
+    window.location.href = window.location.pathname + '?cart=open';
+}
+
+function ensureBundleCartFrame(){
+    var frame = document.getElementById('bundle-cart-frame');
+
+    if(!frame){
+        frame = document.createElement('iframe');
+        frame.id = 'bundle-cart-frame';
+        frame.name = 'bundle-cart-frame';
+        frame.style.display = 'none';
+        document.body.appendChild(frame);
+    }
+
+    return frame;
+}
+
+function submitBundleToCartDrawer(form, btn){
+    var frame = ensureBundleCartFrame(),
+        originalText = btn.text(),
+        didLoad = false,
+        hiddenAddInput = form.find('input[type="hidden"][name="add"]');
+
+    btn.data('adding', true);
+    btn.prop('disabled', true);
+    btn.text('Adding...');
+
+    if(!hiddenAddInput.length){
+        hiddenAddInput = $('<input>', {
+            type: 'hidden',
+            name: 'add',
+            value: '1'
+        }).appendTo(form);
+    }else{
+        hiddenAddInput.val('1');
+    }
+
+    $(frame).off('load.bundleCart').on('load.bundleCart', function(){
+        var frameUrl = '';
+
+        try{
+            frameUrl = frame.contentWindow.location.href;
+        }catch(error){
+            frameUrl = '';
+        }
+
+        if(!frameUrl || frameUrl === 'about:blank'){
+            return;
+        }
+
+        if(!didLoad){
+            didLoad = true;
+            reloadWithCartDrawer();
+        }
+    });
+
+    form.attr('target', frame.name);
+    form.get(0).submit();
+
+    setTimeout(function(){
+        if(!didLoad){
+            btn.data('adding', false);
+            btn.prop('disabled', false);
+            btn.text(originalText);
+            showProductOptionAlert(form, 'The cart did not respond. Please try Add to cart again.');
+        }
+    }, 12000);
+}
+
+function showProductOptionAlert(form, message){
+    var formScope = form && form.length ? form : $(document),
+        optionAlert = formScope.find('#option-alert');
+
+    if(!optionAlert.length){
+        optionAlert = $('#option-alert');
+    }
+
+    optionAlert.text(message || 'Please select product variation first');
+    optionAlert.removeClass('hidden');
+
+    if(optionAlert.length){
         $('html, body').animate({
             scrollTop: optionAlert.offset().top - 100
         }, 300);
+    }
+}
+
+function hideProductOptionAlert(form){
+    var formScope = form && form.length ? form : $(document);
+
+    formScope.find('#option-alert').addClass('hidden');
+    formScope.find('.border-red-500').removeClass('border-red-500');
+}
+
+function getOptionFieldLabel(field){
+    var labelText = field.closest('.mb-4').find('label').first().text();
+
+    labelText = $.trim(labelText);
+
+    return labelText || 'required option';
+}
+
+function validateRequiredCustomOptions(form){
+    var isValid = true,
+        missingLabel = '',
+        requiredFields = form.find('input[required], select[required], textarea[required]').filter(function(){
+            var field = $(this);
+
+            return field.is(':visible') && !field.hasClass('selected-option-value');
+        });
+
+    requiredFields.removeClass('border-red-500');
+
+    requiredFields.each(function(){
+        var field = $(this),
+            value = $.trim(field.val() || '');
+
+        if(!value){
+            isValid = false;
+            missingLabel = getOptionFieldLabel(field);
+            field.addClass('border-red-500');
+            return false;
+        }
+    });
+
+    if(!isValid){
+        showProductOptionAlert(form, 'Please enter ' + missingLabel + ' first');
+    }
+
+    return isValid;
+}
+
+$(document).on('submit', 'form', function(e) {
+    var form = $(this),
+        nativeEvent = e.originalEvent || {},
+        submitter = $(nativeEvent.submitter || document.activeElement);
+
+    if(!isBundleForm(form) || submitter.is('#btn-buynow') || submitter.attr('name') === 'express'){
         return;
     }
 
-    // Hide alert if previously shown
-    $('#option-alert').addClass('hidden');
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    handleAddToCart.call(form.find('#btn-add-to-cart').get(0), e);
+    return false;
+});
+
+function resyncSelectedVariantFromButtons(form){
+    var selectedOptionInput = document.getElementById('selected-option'),
+        selectedOptionValue = selectedOptionInput ? selectedOptionInput.value : '';
+
+    if(selectedOptionValue){
+        return selectedOptionValue;
+    }
+
+    var totalOptionGroups = form.find('#variants_options .selected-option-value').length,
+        selectedButtons = form.find('#variants_options .select-option-btn.border-primary');
+
+    if(selectedButtons.length === totalOptionGroups && totalOptionGroups > 0){
+        var selectedOptions = {},
+            allValid = true;
+
+        selectedButtons.each(function(){
+            var btn = $(this),
+                optionName = btn.data('option-name'),
+                optionValue = btn.data('option-value');
+
+            if(optionName && optionValue){
+                btn.closest('.mb-4').find('.selected-option-value').val(optionValue);
+                selectedOptions[optionName] = optionValue;
+            }else{
+                allValid = false;
+            }
+        });
+
+        if(allValid && Object.keys(selectedOptions).length === totalOptionGroups){
+            processSelectOptions(selectedOptions);
+            selectedOptionValue = document.getElementById('selected-option').value;
+        }
+    }
+
+    return selectedOptionValue;
+}
+
+function handleAddToCart(e) {
+    if(e){
+        e.preventDefault();
+    }
 
     var form = $(this).closest('form');
-    var formData = form.serialize();
+
+    if(!form.length){
+        return;
+    }
+
+    var btn = $(this);
+
+    if(btn.data('adding')){
+        return;
+    }
+
+    if(isBundleForm(form) && !validateBundleSelections(form)){
+        return;
+    }
+
+    if(!validateRequiredCustomOptions(form)){
+        return;
+    }
+
+    var hasVariantOptions = form.find('#variants_options .selected-option-value').length > 0 || form.find('.select-variant-btn').length > 0,
+        selectedOptionValue = isBundleForm(form) ? true : resyncSelectedVariantFromButtons(form);
+
+    if(hasVariantOptions && !isBundleForm(form) && (!selectedOptionValue || selectedOptionValue === '')){
+        showProductOptionAlert(form, 'Please select product variation first');
+        return;
+    }
+
+    hideProductOptionAlert(form);
+
+    if(isBundleForm(form)){
+        submitBundleToCartDrawer(form, btn);
+        return;
+    }
+
+    form.removeAttr('target');
+    var formData = serializeAddToCartForm(form, this);
 
     // Disable button and show loading state
-    var btn = $(this);
     var originalText = btn.text();
+    btn.data('adding', true);
     btn.prop('disabled', true);
     btn.text('Adding...');
 
@@ -1343,10 +2070,11 @@ function handleAddToCart(e) {
         success: function(response) {
             // Reload the page to update cart drawer content and count
             // Cart drawer will open automatically on page load
-            window.location.href = window.location.pathname + '?cart=open';
+            reloadWithCartDrawer();
         },
         error: function(xhr, status, error) {
             // Re-enable button on error
+            btn.data('adding', false);
             btn.prop('disabled', false);
             btn.text(originalText);
 
@@ -1365,71 +2093,45 @@ $(document).on('click touchend', '#btn-buynow', function(e) {
         setTimeout(function() { handleBuyNow.call(self, e); }, 10);
         return;
     }
-    handleBuyNow.call(this, e);
+    return handleBuyNow.call(this, e);
 });
 
 function handleBuyNow(e) {
-    e.preventDefault();
-
-    // Check if option selection is required (product has variant options)
-    var hasVariantOptions = $('#variants_options').length > 0;
-
-    // Use native DOM for more reliable reads on iOS Safari
-    var selectedOptionInput = document.getElementById('selected-option');
-    var selectedOptionValue = selectedOptionInput ? selectedOptionInput.value : '';
-
-    // iOS Safari bfcache fix: If variant should be selected but hidden input is empty,
-    // try to re-sync from visually selected buttons
-    if (hasVariantOptions && (!selectedOptionValue || selectedOptionValue === '')) {
-        var totalOptionGroups = $('#variants_options').find('.selected-option-value').length;
-        var selectedButtons = $('#variants_options').find('.select-option-btn.border-primary');
-
-        if (selectedButtons.length === totalOptionGroups && totalOptionGroups > 0) {
-            var selectedOptions = {};
-            var allValid = true;
-
-            selectedButtons.each(function() {
-                var btn = $(this);
-                var optionName = btn.data('option-name');
-                var optionValue = btn.data('option-value');
-                if (optionName && optionValue) {
-                    btn.closest('.mb-4').find('.selected-option-value').val(optionValue);
-                    selectedOptions[optionName] = optionValue;
-                } else {
-                    allValid = false;
-                }
-            });
-
-            if (allValid && Object.keys(selectedOptions).length === totalOptionGroups) {
-                processSelectOptions(selectedOptions);
-                selectedOptionValue = document.getElementById('selected-option').value;
-            }
-        }
+    if(e){
+        e.preventDefault();
     }
 
-    if (hasVariantOptions && (!selectedOptionValue || selectedOptionValue === '')) {
-        // Show alert
-        var optionAlert = $('#option-alert');
-        optionAlert.removeClass('hidden');
-        // Scroll to alert
-        $('html, body').animate({
-            scrollTop: optionAlert.offset().top - 100
-        }, 300);
-        return;
-    }
-
-    // Hide alert if previously shown
-    $('#option-alert').addClass('hidden');
-
-    // Explicitly submit the form with express parameter
     var form = $(this).closest('form');
+
+    if(isBundleForm(form) && !validateBundleSelections(form)){
+        if(e && e.stopImmediatePropagation) e.stopImmediatePropagation();
+        return false;
+    }
+
+    if(!validateRequiredCustomOptions(form)){
+        if(e && e.stopImmediatePropagation) e.stopImmediatePropagation();
+        return false;
+    }
+
+    var hasVariantOptions = form.find('#variants_options .selected-option-value').length > 0 || form.find('.select-variant-btn').length > 0,
+        selectedOptionValue = isBundleForm(form) ? true : resyncSelectedVariantFromButtons(form);
+
+    if(hasVariantOptions && !isBundleForm(form) && (!selectedOptionValue || selectedOptionValue === '')){
+        showProductOptionAlert(form, 'Please select product variation first');
+        if(e && e.stopImmediatePropagation) e.stopImmediatePropagation();
+        return false;
+    }
+
+    hideProductOptionAlert(form);
 
     // Add hidden input for express checkout (button value isn't sent with form.submit())
     if (!form.find('input[name="express"]').length) {
         form.append('<input type="hidden" name="express" value="1">');
     }
 
+    form.removeAttr('target');
     form.get(0).submit();
+    return true;
 }
 
 // ============================================
