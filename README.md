@@ -24,3 +24,6 @@ Fixed option buttons should appear sold-out based on the currently-selected comb
 - Add product wholesale function
 - Add able to display and read all product options
 - Add function to detect if product image is broken/not found replace it with placeholder
+
+### Version 1.4.0
+- Add switch currency features
