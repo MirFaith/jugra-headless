@@ -279,7 +279,6 @@
 
                 <!-- Product Form -->
                 {% if product.is_bundle %}
-                {# HOLD: Product bundle component disabled for Jugra release hold.
                 {{ form_open('cart/add/bundle', { method: 'post', id: 'product-bundle-form' }) }}
                     <fieldset id="product-options">
                         <input type="hidden" name="product_id" value="{{ product.id }}">
@@ -420,18 +419,8 @@
                         </div>
                     </fieldset>
                 </form>
-                #}
-                <div class="space-y-3">
-                    <button
-                        class="w-full bg-secondary-border text-secondary border-2 border-secondary-border px-8 py-4 text-sm font-semibold tracking-widest uppercase cursor-not-allowed"
-                        disabled
-                    >
-                        Sold Out
-                    </button>
-                </div>
                 {% else %}
                 {{ form_open('cart/add', { method: 'post', id: 'product-add-form' }) }}
-                    {# HOLD: Wholesale component disabled for Jugra release hold.
                     {% if product.wholesale_prices | length >= 1 %}
                         <div class="wholesale-section mb-6 border border-secondary-border/40">
                             <div class="px-4 py-3 border-b border-secondary-border/40 bg-secondary-border/10">
@@ -466,7 +455,6 @@
                             </div>
                         </div>
                     {% endif %}
-                    #}
                     <fieldset id="product-options">
                         {% set is_default_variant_check = (product.variants | length == 1 and product.selected_or_first_available_variant.name == 'Default') %}
                         {% set selectableOptionCount = 0 %}

@@ -291,7 +291,7 @@
                         </svg>
                         {% if cart.item_count > 0 %}
                             <span class="cart-count absolute -top-2 -right-2 bg-primary text-white text-xs font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                                {{ cart.item_count }}
+                                {{ cart.item_count > 9 ? '9+' : cart.item_count }}
                             </span>
                         {% endif %}
                     </button>
@@ -470,7 +470,7 @@
                         </svg>
                         {% if cart.item_count > 0 %}
                             <span id="cart-count" class="absolute -top-1.5 -right-1.5 bg-primary text-white text-[10px] font-semibold w-4 h-4 rounded-full flex items-center justify-center">
-                                {{ cart.item_count }}
+                                {{ cart.item_count > 9 ? '9+' : cart.item_count }}
                             </span>
                         {% endif %}
                     </button>
@@ -652,8 +652,8 @@
     <div id="cart-drawer" class="fixed inset-0 bg-dark-primary/30 backdrop-blur-sm z-50 opacity-0 invisible transition-all duration-300">
         <div id="cart-drawer-panel" class="fixed right-0 top-0 bottom-0 w-full md:w-[450px] bg-card shadow-2xl overflow-y-auto transform translate-x-full transition-transform duration-300 ease-out flex flex-col">
             <!-- Cart Header -->
-            <div class="flex items-center justify-between px-5 py-5 border-b border-secondary-border/30">
-                <h2 class="font-display text-xl font-semibold text-accent">
+            <div class="flex items-center justify-between px-5 py-5 border-b border-secondary-border/50">
+                <h2 class="font-display text-2xl font-semibold text-accent">
                     Shopping cart
                 </h2>
                 <button
@@ -687,7 +687,7 @@
                                     {% set totalBundleCompareAtPrice = totalBundleCompareAtPrice + compareAtPrice %}
                                     {% set totalBundleSavePrice = totalBundleSavePrice + bundlesSavePrice %}
                                 {% endfor %}
-                                <div class="cart-item px-5 py-4 border-b border-secondary-border/20">
+                                <div class="cart-item px-5 py-4 border-b border-secondary-border/50">
                                     <div class="flex items-center gap-4">
                                         <a href="{{ item.product.url }}" class="w-20 h-20 flex-shrink-0 bg-secondary-border/20 rounded overflow-hidden">
                                             {% if item.product.featured_image %}
@@ -697,7 +697,7 @@
                                             {% endif %}
                                         </a>
                                         <div class="flex-1 min-w-0">
-                                            <div class="flex items-start justify-between gap-2">
+                                            <div class="flex items-center justify-between gap-2 mb-0">
                                                 <div>
                                                     <a href="{{ item.product.url }}" class="group hover:text-primary transition-colors block mb-1">
                                                         <h3 class="text-sm font-medium text-accent group-hover:text-primary transition-colors">{{ item.product.name | escape }}</h3>
@@ -766,64 +766,62 @@
                             {%- if not cart_item_image and item.product.featured_image -%}
                                 {%- set cart_item_image = item.product.featured_image -%}
                             {%- endif -%}
-                            <div class="cart-item px-5 py-4 border-b border-secondary-border/20 flex items-center gap-4">
+                            <div class="cart-item-wrapper relative overflow-hidden border-b border-secondary-border/50" data-remove-url="/cart/change?line={{ loop.index }}&quantity=0">
+                                <div class="cart-item-delete-bg absolute inset-y-0 right-0 w-20 bg-red-500 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-150">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </div>
+                                <div class="cart-item px-5 py-4 flex items-center gap-4">
                                 <!-- Product Image -->
-                                <a
-                                    href="{{ item.product.url }}"
-                                    class="w-20 h-20 flex-shrink-0 bg-secondary-border/20 rounded overflow-hidden"
-                                >
-                                    {% if cart_item_image %}
-                                        <img
-                                            src="{{ cart_item_image | product_image_size('small') }}"
-                                            alt="{{ item.product.name | escape }}"
-                                            class="w-full h-full object-cover"
-                                            loading="lazy"
-                                        >
-                                    {% else %}
-                                        {{ 'product-1' | placeholder_svg_tag }}
-                                    {% endif %}
-                                </a>
+                                <div class="relative w-[60px] h-[60px] flex-shrink-0">
+                                    <a
+                                        href="{{ item.product.url }}"
+                                        class="block w-full h-full bg-secondary-border/20 rounded overflow-hidden"
+                                    >
+                                        {% if cart_item_image %}
+                                            <img
+                                                src="{{ cart_item_image | product_image_size('small') }}"
+                                                alt="{{ item.product.name | escape }}"
+                                                class="w-full h-full object-cover"
+                                                loading="lazy"
+                                            >
+                                        {% else %}
+                                            {{ 'product-1' | placeholder_svg_tag }}
+                                        {% endif %}
+                                    </a>
+                                    <span class="absolute -top-2.5 -right-2.5 bg-accent text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center leading-none pointer-events-none">{{ item.quantity > 9 ? '9+' : item.quantity }}</span>
+                                </div>
 
                                 <!-- Product Details -->
                                 <div class="flex-1 flex flex-col">
-                                    <div class="flex items-start justify-between mb-2">
+                                    <div class="flex items-center justify-between gap-6 mb-0">
                                         <div class="flex-1">
+                                            {% set hasVariant = false %}
+                                            {% for item_option in item.options %}
+                                                {% if item_option.name != "Default" and item_option.value != "Default" %}
+                                                    {% set hasVariant = true %}
+                                                {% endif %}
+                                            {% endfor %}
                                             <a
                                                 href="{{ item.product.url }}"
-                                                class="group hover:text-primary transition-colors block mb-1"
+                                                class="group hover:text-primary transition-colors block {{ (hasVariant or item.bundle_products is not empty) ? 'mb-1' : 'mb-0' }}"
                                             >
-                                                <h3 class="text-sm font-medium text-accent group-hover:text-primary transition-colors">
+                                                <h3 class="text-base font-medium text-accent group-hover:text-primary transition-colors">
                                                     {{ item.product.name | escape }}
                                                 </h3>
                                             </a>
 
-                                            <!-- Variant & Quantity -->
-                                            {% set has_variant = false %}
-                                            {% for item_option in item.options %}
-                                                {% if item_option.name != "Default" and item_option.value != "Default" %}
-                                                    {% set has_variant = true %}
-                                                    <p class="text-xs text-secondary">
-                                                        {{ item_option.name | escape }}: {{ item_option.value | escape }} x {{ item.quantity }}
-                                                    </p>
-                                                {% endif %}
-                                            {% endfor %}
-                                            {% if not has_variant %}
-                                            <p class="text-xs text-secondary">
-                                                x {{ item.quantity }}
-                                            </p>
+                                            <!-- Bundle items list -->
+                                            {% if item.bundle_products is not empty %}
+                                                <p class="text-xs text-secondary mt-1 mb-0">{% for item_bundle in item.bundle_products %}{{ item_bundle.product.name | escape }}{% if item_bundle.name != "Default" %} / {{ item_bundle.name | escape }}{% endif %}{% if not loop.last %}{% if loop.revindex == 2 %} & {% else %}, {% endif %}{% endif %}{% endfor %}</p>
                                             {% endif %}
 
-                                            <!-- Remove Link -->
-                                            <a
-                                                href="/cart/change?line={{ loop.index }}&quantity=0"
-                                                class="text-secondary hover:text-primary transition-colors text-xs inline-flex items-center gap-1 mt-1"
-                                            >
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 9l-6 6M9 9l6 6"/>
-                                                </svg>
-                                                Remove
-                                            </a>
+                                            <!-- Variant -->
+                                            {% for item_option in item.options %}
+                                                {% if item_option.name != "Default" and item_option.value != "Default" %}
+                                                    <p class="text-xs text-secondary">{{ item_option.name | escape }}: {{ item_option.value | escape }}</p>
+                                                {% endif %}
+                                            {% endfor %}
+
                                         </div>
 
                                         <div class="ml-2 text-right">
@@ -833,12 +831,13 @@
                                                     {{ compare_total | money }}
                                                 </p>
                                             {% endif %}
-                                            <p class="text-sm font-medium text-accent">
+                                            <p class="text-base font-medium text-accent">
                                                 {{ item.total | money }}
                                             </p>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
                             </div>
                             {% endif %}
                         {% endfor %}
@@ -862,16 +861,16 @@
 
             <!-- Cart Footer -->
             {% if cart.item_count > 0 %}
-                <div id="cart-footer" class="border-t border-secondary-border/30 p-5 bg-secondary-border/5">
+                <div id="cart-footer" class="border-t border-secondary-border/50 p-5 bg-secondary-border/5">
                     <!-- Subtotal -->
-                    <div class="flex justify-between items-center mb-4">
+                    <div class="flex justify-between items-center mb-8">
                         <span class="text-base font-medium text-accent">Total</span>
                         <span id="cart-subtotal" class="font-display text-xl font-semibold text-accent">
                             {{ cart.total_price | money }}
                         </span>
                     </div>
 
-                    <p class="text-xs text-secondary mb-4 text-center">
+                    <p class="text-sm text-secondary mb-8 text-center">
                         Shipping and taxes calculated at checkout
                     </p>
 
@@ -1118,6 +1117,74 @@
             {{ page.metafields.builder.js }}
         </script>
     {% endif %}
+
+    <!-- Swipe to delete cart items -->
+    <script>
+    (function(){
+        var THRESHOLD = 80; // px to trigger delete
+
+        function initSwipe(wrapper){
+            var inner = wrapper.querySelector('.cart-item'),
+                deleteBg = wrapper.querySelector('.cart-item-delete-bg'),
+                removeUrl = wrapper.dataset.removeUrl,
+                startX = 0, currentX = 0, dragging = false;
+
+            function onStart(clientX){
+                startX = clientX;
+                currentX = 0;
+                dragging = true;
+                inner.style.transition = 'none';
+                inner.style.cursor = 'grabbing';
+            }
+
+            function onMove(clientX){
+                if(!dragging) return;
+                var dx = clientX - startX;
+                if(dx > 0) return;
+                currentX = dx;
+                inner.style.transform = 'translateX(' + currentX + 'px)';
+                deleteBg.style.opacity = Math.min(Math.abs(currentX) / THRESHOLD, 1);
+            }
+
+            function onEnd(){
+                if(!dragging) return;
+                dragging = false;
+                inner.style.cursor = '';
+                inner.style.transition = 'transform 0.25s ease';
+                if(Math.abs(currentX) >= THRESHOLD){
+                    inner.style.transform = 'translateX(-100%)';
+                    deleteBg.style.opacity = '1';
+                    setTimeout(function(){ window.location.href = removeUrl; }, 250);
+                } else {
+                    inner.style.transform = 'translateX(0)';
+                    deleteBg.style.opacity = '0';
+                }
+            }
+
+            // Touch
+            inner.addEventListener('touchstart', function(e){ onStart(e.touches[0].clientX); }, {passive: true});
+            inner.addEventListener('touchmove',  function(e){ onMove(e.touches[0].clientX); },  {passive: true});
+            inner.addEventListener('touchend',   onEnd);
+
+            // Mouse
+            inner.addEventListener('mousedown', function(e){ onStart(e.clientX); });
+            document.addEventListener('mousemove', function(e){ if(dragging) onMove(e.clientX); });
+            document.addEventListener('mouseup', onEnd);
+        }
+
+        function attachSwipe(){
+            document.querySelectorAll('.cart-item-wrapper').forEach(initSwipe);
+        }
+
+        document.addEventListener('DOMContentLoaded', attachSwipe);
+
+        // Re-attach after cart updates (MutationObserver on #cart-items)
+        var cartItems = document.getElementById('cart-items');
+        if(cartItems){
+            new MutationObserver(attachSwipe).observe(cartItems, {childList: true, subtree: true});
+        }
+    })();
+    </script>
 
     <!-- Cloudflare Web Analytics -->
     <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "aecf724216724271b6e368efb7fa20aa"}'></script>
