@@ -48,7 +48,8 @@
                     <!-- Cart Items List -->
                     <div class="divide-y divide-secondary-border/50 border-t border-secondary-border/50 md:border-t-0">
                         {% for item in cart.items %}
-                            {% if item.is_bundle == true %}
+                            {# HOLD: Product bundle cart-page display disabled for Jugra release hold. #}
+                            {% if false and item.is_bundle == true %}
                                 {% set totalBundleCompareAtPrice = 0 %}
                                 {% set totalBundleSavePrice = 0 %}
                                 {% for item_bundle in item.bundle_products %}
@@ -91,6 +92,7 @@
                                             </div>
 
                                             <div class="md:col-span-3 flex justify-start md:justify-end items-center">
+                                                {# HOLD: Cart-page quantity update input disabled for Jugra release hold.
                                                 <input
                                                     type="number"
                                                     form="cart-update-form"
@@ -100,6 +102,8 @@
                                                     aria-label="Quantity for {{ item.product.name | escape }}"
                                                     class="w-20 border border-secondary-border/50 px-2 py-1 text-sm bg-transparent focus:outline-none focus:border-primary rounded"
                                                 >
+                                                #}
+                                                <span class="text-base font-medium">x {{ item.quantity }}</span>
                                             </div>
 
                                             <div class="md:col-span-3 flex md:flex-col justify-between md:justify-center md:items-end">
@@ -233,6 +237,7 @@
 
                                     <!-- Quantity -->
                                     <div class="md:col-span-3 flex justify-start md:justify-end items-center">
+                                        {# HOLD: Cart-page quantity update input disabled for Jugra release hold.
                                         <input
                                             type="number"
                                             form="cart-update-form"
@@ -242,6 +247,8 @@
                                             aria-label="Quantity for {{ item.product.name | escape }}"
                                             class="w-20 border border-secondary-border/50 px-2 py-1 text-sm bg-transparent focus:outline-none focus:border-primary rounded"
                                         >
+                                        #}
+                                        <span class="text-base font-medium">x {{ item.quantity }}</span>
                                     </div>
 
                                     <!-- Item Total -->
@@ -286,7 +293,7 @@
                 {% set total_compare_price = 0 %}
                 {% set total_savings = 0 %}
                 {% for item in cart.items %}
-                    {% if item.is_bundle == true %}
+                    {% if false and item.is_bundle == true %}
                         {% set bundle_compare_total = 0 %}
                         {% for item_bundle in item.bundle_products %}
                             {% set bundle_compare_total = bundle_compare_total + item_bundle.total_compare_at_price %}
@@ -305,6 +312,10 @@
                 {% set total_savings = total_compare_price - cart.total_price %}
 
                 {{ form_open('cart', { method: 'post', id: 'cart-update-form' }) }}
+                    {% for item in cart.items %}
+                        <input type="hidden" name="updates[]" value="{{ item.quantity }}">
+                    {% endfor %}
+
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
                         <!-- Left Column: Order Notes -->
                         <div class="flex flex-col px-5 md:px-0">
@@ -353,7 +364,8 @@
                                     </div>
 
                                     <!-- Action Buttons -->
-                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                                        {# HOLD: Cart-page quantity update button disabled for Jugra release hold.
                                         <button
                                             type="submit"
                                             name="update"
@@ -361,6 +373,7 @@
                                         >
                                             Update Cart
                                         </button>
+                                        #}
                                         <a
                                             href="/"
                                             class="w-full bg-transparent border-2 border-primary text-primary px-8 py-4 text-sm font-semibold tracking-widest uppercase hover:bg-primary hover:text-white transition-all text-center flex items-center justify-center"

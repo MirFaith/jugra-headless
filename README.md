@@ -27,3 +27,6 @@ Fixed option buttons should appear sold-out based on the currently-selected comb
 
 ### Version 1.4.0
 - Add switch currency features
+
+### Version 1.4.1
+- Comment down the product bundle, wholesale and update cart functions

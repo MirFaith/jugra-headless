@@ -673,7 +673,8 @@
                     <!-- Cart Items List -->
                     <div id="cart-items">
                         {% for item in cart.items %}
-                            {% if item.is_bundle == true %}
+                            {# HOLD: Product bundle cart-drawer display disabled for Jugra release hold. #}
+                            {% if false and item.is_bundle == true %}
                                 {% set totalBundleCompareAtPrice = 0 %}
                                 {% set totalBundleSavePrice = 0 %}
                                 {% for item_bundle in item.bundle_products %}

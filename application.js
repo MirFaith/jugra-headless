@@ -1007,6 +1007,9 @@ $(document).ready(function() {
         inputQuantity(event);
     });
 
+    /*
+     * HOLD: Product bundle interactions disabled for Jugra release hold.
+     *
     if($('#product-bundle-form').length){
         enableButtons();
     }
@@ -1106,6 +1109,7 @@ $(document).ready(function() {
             inputBundleQuantity(productId, loopId);
         }
     });
+     */
 
 	// Populate search input with current search query and filter products
 	const urlParams = new URLSearchParams(window.location.search);
@@ -1225,10 +1229,14 @@ function updateSelectedOptionsVariant(selectedVariant){
     $('input#selected-option[name="id"]').val(variantId);
 }
 
+/*
+ * HOLD: Product bundle helper disabled for Jugra release hold.
+ *
 function updateSelectedBundleVariant(productId, variantId, loopId){
     $('input#product_bundle_' + productId + '_variant_' + loopId).attr('value', variantId);
     $('input#product_bundle_' + productId + '_variant_' + loopId).val(variantId);
 }
+ */
 
 function parseMoneyValue(formattedPrice){
     if (!formattedPrice) return 0;
@@ -1251,7 +1259,8 @@ function formatMoneyValue(amount, currencyType, fixedSize){
 function updatePriceText(variantId = null){
     var selectedVariant = $('#variant_' + $('#selected-option').val()),
         currentQuantity = $('#product_input_quantity').val(),
-        wholesaleInput = $('input[id^="wholesalePrice_"]'),
+        // HOLD: Wholesale price inputs disabled for Jugra release hold.
+        wholesaleInput = $(),
         formattedProductPrice, formattedDiscountPrice,
         formattedTotalPrice, formattedTotalDiscountPrice, productPrice, discountPrice,
         productPriceElement, discountPriceElement, currencyType, storeCurrency, fixedSize,
@@ -1274,6 +1283,9 @@ function updatePriceText(variantId = null){
 
     currencyType = getMoneyCurrency(formattedProductPrice);
 
+    /*
+     * HOLD: Wholesale price calculation disabled for Jugra release hold.
+     *
     if(wholesaleInput.length >= 1){
         wholesaleInput.each(function(){
             var minQuantity = parseInt($(this).data('min-quantity'), 10) || 0,
@@ -1287,6 +1299,7 @@ function updatePriceText(variantId = null){
             }
         });
     }
+     */
 
     currencyType = currencyType || getMoneyCurrency(formattedProductPrice);
     productPrice = parseMoneyValue(formattedProductPrice);
@@ -1489,6 +1502,9 @@ function inputQuantity(event){
     updatePriceText();
 }
 
+/*
+ * HOLD: Product bundle helpers disabled for Jugra release hold.
+ *
 function disabledBundleButtons(){
     $("#btn-buynow, #btn-add-to-cart").attr('disabled', 'disabled');
 }
@@ -1760,6 +1776,7 @@ function updateBundlePriceText(productId, bundleVariantId = null, loopId){
         bundleDiscountPriceElement.text(formatMoneyValue(totalBundleDiscountPrice, currencyType, fixedSize));
     }
 }
+ */
 
 // Handle Add to Cart button - intercept form submission and open cart drawer
 $(document).on('click touchend', '#btn-add-to-cart', function(e) {
@@ -1775,8 +1792,13 @@ $(document).on('click touchend', '#btn-add-to-cart', function(e) {
 });
 
 function isBundleForm(form){
+    // HOLD: Product bundle add-to-cart handling disabled for Jugra release hold.
+    return false;
+
+    /*
     var action = form.attr('action') || '';
     return form.is('#product-bundle-form') || action.indexOf('/bundle') !== -1 || action.indexOf('cart/add/bundle') !== -1;
+     */
 }
 
 function validateBundleSelections(form){
@@ -1974,6 +1996,20 @@ $(document).on('submit', 'form', function(e) {
     e.preventDefault();
     e.stopImmediatePropagation();
     handleAddToCart.call(form.find('#btn-add-to-cart').get(0), e);
+    return false;
+});
+
+$(document).on('submit', '#product-add-form', function(e) {
+    var nativeEvent = e.originalEvent || {},
+        submitter = $(nativeEvent.submitter || document.activeElement);
+
+    if(submitter.is('#btn-buynow') || submitter.attr('name') === 'express'){
+        return;
+    }
+
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    handleAddToCart.call($(this).find('#btn-add-to-cart').get(0), e);
     return false;
 });
 
