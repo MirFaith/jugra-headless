@@ -30,3 +30,6 @@ Fixed option buttons should appear sold-out based on the currently-selected comb
 
 ### Version 1.4.1
 - Comment down the product bundle, wholesale and update cart functions
+
+### Version 1.4.2
+- Adjust the styling of the product bundle display at the product page, cart drawer and cart page
