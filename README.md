@@ -33,3 +33,7 @@ Fixed option buttons should appear sold-out based on the currently-selected comb
 
 ### Version 1.4.2
 - Adjust the styling of the product bundle display at the product page, cart drawer and cart page
+
+### Version 1.4.3
+- Fixed product bundle display at cart page
+- Re-enable the product wholesale functions

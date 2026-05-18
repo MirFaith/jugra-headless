@@ -48,25 +48,20 @@
                     <!-- Cart Items List -->
                     <div class="divide-y divide-secondary-border/50 border-t border-secondary-border/50 md:border-t-0">
                         {% for item in cart.items %}
-                            {# HOLD: Product bundle cart-page display disabled for Jugra release hold. #}
-                            {% if false and item.is_bundle == true %}
+                            {% if item.bundle_products is not empty %}
                                 {% set totalBundleCompareAtPrice = 0 %}
-                                {% set totalBundleSavePrice = 0 %}
+                                {% set totalBundlePrice = 0 %}
                                 {% for item_bundle in item.bundle_products %}
                                     {% set compareAtPrice = item_bundle.total_compare_at_price %}
                                     {% set bundlePrice = item_bundle.total %}
-                                    {% set bundlesSavePrice = compareAtPrice - bundlePrice %}
-                                    {% if bundlesSavePrice < 0 %}
-                                        {% set bundlesSavePrice = 0 %}
-                                    {% endif %}
                                     {% set totalBundleCompareAtPrice = totalBundleCompareAtPrice + compareAtPrice %}
-                                    {% set totalBundleSavePrice = totalBundleSavePrice + bundlesSavePrice %}
+                                    {% set totalBundlePrice = totalBundlePrice + bundlePrice %}
                                 {% endfor %}
 
-                                <!-- Bundle item (held) -->
                                 <div class="cart-item px-5 py-4 md:px-6">
-                                    <div class="flex items-center gap-4">
-                                        <div class="relative w-[60px] h-[60px] md:w-20 md:h-20 flex-shrink-0">
+                                    <!-- Mobile layout (drawer style) -->
+                                    <div class="flex items-center gap-4 md:hidden">
+                                        <div class="relative w-[60px] h-[60px] flex-shrink-0">
                                             <a href="{{ item.product.url }}" class="block w-full h-full bg-secondary-border/20 rounded overflow-hidden">
                                                 {% if item.product.featured_image is not empty %}
                                                     <img src="{{ item.product.featured_image | product_image_size('small') }}" alt="{{ item.product.name | escape }}" class="w-full h-full object-cover" loading="lazy">
@@ -76,21 +71,19 @@
                                             </a>
                                             <span class="absolute -top-2.5 -right-2.5 bg-accent text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center leading-none pointer-events-none">{{ item.quantity > 9 ? '9+' : item.quantity }}</span>
                                         </div>
-                                        <div class="flex-1 min-w-0">
+                                        <div class="flex-1 flex flex-col min-w-0">
                                             <div class="flex items-center justify-between gap-6 mb-0">
-                                                <div class="flex-1">
+                                                <div class="flex-1 min-w-0">
                                                     <a href="{{ item.product.url }}" class="group hover:text-primary transition-colors block mb-1">
                                                         <h3 class="text-base font-medium text-accent group-hover:text-primary transition-colors">{{ item.product.name | escape }}</h3>
                                                     </a>
-                                                    <p class="text-xs text-secondary mb-0">
-                                                        {% if totalBundleCompareAtPrice > item.total %}Save {{ totalBundleSavePrice | money }} With These Bundle Items{% else %}Grab This Amazing Bundle Now{% endif %}
-                                                    </p>
+                                                    <p class="text-xs text-secondary mb-0">{% for item_bundle in item.bundle_products %}{{ item_bundle.product.name | escape }}{% if item_bundle.name != "Default" %} / {{ item_bundle.name | escape }}{% endif %}{% if not loop.last %}{% if loop.revindex == 2 %} & {% else %}, {% endif %}{% endif %}{% endfor %}</p>
                                                 </div>
                                                 <div class="text-right flex-shrink-0">
-                                                    {% if totalBundleCompareAtPrice > item.total %}
+                                                    {% if totalBundleCompareAtPrice > totalBundlePrice %}
                                                         <p class="text-xs text-secondary line-through">{{ totalBundleCompareAtPrice | money }}</p>
                                                     {% endif %}
-                                                    <p class="text-base font-medium text-accent">{{ item.total | money }}</p>
+                                                    <p class="text-base font-medium text-accent">{{ totalBundlePrice | money }}</p>
                                                 </div>
                                             </div>
                                             <a href="/cart/change?line={{ loop.index }}&quantity=0" class="text-secondary hover:text-primary transition-colors text-xs inline-flex items-center gap-1 mt-1">
@@ -99,6 +92,42 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 9l-6 6M9 9l6 6"/>
                                                 </svg>
                                                 Remove
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <!-- Desktop layout (grid with quantity column) -->
+                                    <div class="hidden md:grid md:grid-cols-12 md:gap-4 md:items-center">
+                                        <div class="col-span-5 flex gap-4 items-center">
+                                            <a href="{{ item.product.url }}" class="w-20 h-20 flex-shrink-0 bg-secondary-border/20 rounded overflow-hidden block">
+                                                {% if item.product.featured_image is not empty %}
+                                                    <img src="{{ item.product.featured_image | product_image_size('small') }}" alt="{{ item.product.name | escape }}" class="w-full h-full object-cover" loading="lazy">
+                                                {% else %}
+                                                    {{ 'product-1' | placeholder_svg_tag }}
+                                                {% endif %}
+                                            </a>
+                                            <div class="flex-1 min-w-0">
+                                                <a href="{{ item.product.url }}" class="group hover:text-primary transition-colors block mb-1">
+                                                    <h3 class="text-base font-medium text-accent group-hover:text-primary transition-colors">{{ item.product.name | escape }}</h3>
+                                                </a>
+                                                <p class="text-xs text-secondary mb-0">{% for item_bundle in item.bundle_products %}{{ item_bundle.product.name | escape }}{% if item_bundle.name != "Default" %} / {{ item_bundle.name | escape }}{% endif %}{% if not loop.last %}{% if loop.revindex == 2 %} & {% else %}, {% endif %}{% endif %}{% endfor %}</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-span-3 text-right">
+                                            <span class="text-base font-medium text-accent">x {{ item.quantity }}</span>
+                                        </div>
+                                        <div class="col-span-3 text-right">
+                                            {% if totalBundleCompareAtPrice > totalBundlePrice %}
+                                                <p class="text-xs text-secondary line-through">{{ totalBundleCompareAtPrice | money }}</p>
+                                            {% endif %}
+                                            <p class="text-base font-medium text-accent">{{ totalBundlePrice | money }}</p>
+                                        </div>
+                                        <div class="col-span-1 flex justify-center">
+                                            <a href="/cart/change?line={{ loop.index }}&quantity=0" class="text-secondary hover:text-primary transition-colors">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 9l-6 6M9 9l6 6"/>
+                                                </svg>
                                             </a>
                                         </div>
                                     </div>
@@ -231,15 +260,17 @@
                 {% set total_compare_price = 0 %}
                 {% set total_savings = 0 %}
                 {% for item in cart.items %}
-                    {% if false and item.is_bundle == true %}
+                    {% if item.bundle_products is not empty %}
                         {% set bundle_compare_total = 0 %}
+                        {% set bundle_total = 0 %}
                         {% for item_bundle in item.bundle_products %}
                             {% set bundle_compare_total = bundle_compare_total + item_bundle.total_compare_at_price %}
+                            {% set bundle_total = bundle_total + item_bundle.total %}
                         {% endfor %}
-                        {% if bundle_compare_total > item.total %}
+                        {% if bundle_compare_total > bundle_total %}
                             {% set total_compare_price = total_compare_price + bundle_compare_total %}
                         {% else %}
-                            {% set total_compare_price = total_compare_price + item.total %}
+                            {% set total_compare_price = total_compare_price + bundle_total %}
                         {% endif %}
                     {% elseif item.compare_at_price and item.compare_at_price > item.price %}
                         {% set total_compare_price = total_compare_price + (item.compare_at_price * item.quantity) %}
@@ -249,7 +280,7 @@
                 {% endfor %}
                 {% set total_savings = total_compare_price - cart.total_price %}
 
-                {{ form_open('cart', { method: 'post', id: 'cart-update-form' }) }}
+                {{ form_open('cart', { method: 'post', id: 'cart-checkout-form' }) }}
                     {% for item in cart.items %}
                         <input type="hidden" name="updates[]" value="{{ item.quantity }}">
                     {% endfor %}

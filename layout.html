@@ -673,19 +673,10 @@
                     <!-- Cart Items List -->
                     <div id="cart-items">
                         {% for item in cart.items %}
-                            {# HOLD: Product bundle cart-drawer display disabled for Jugra release hold. #}
-                            {% if false and item.is_bundle == true %}
-                                {% set totalBundleCompareAtPrice = 0 %}
-                                {% set totalBundleSavePrice = 0 %}
+                            {% if item.bundle_products is not empty %}
+                                {% set totalBundlePrice = 0 %}
                                 {% for item_bundle in item.bundle_products %}
-                                    {% set compareAtPrice = item_bundle.total_compare_at_price %}
-                                    {% set bundlePrice = item_bundle.total %}
-                                    {% set bundlesSavePrice = compareAtPrice - bundlePrice %}
-                                    {% if bundlesSavePrice < 0 %}
-                                        {% set bundlesSavePrice = 0 %}
-                                    {% endif %}
-                                    {% set totalBundleCompareAtPrice = totalBundleCompareAtPrice + compareAtPrice %}
-                                    {% set totalBundleSavePrice = totalBundleSavePrice + bundlesSavePrice %}
+                                    {% set totalBundlePrice = totalBundlePrice + item_bundle.total %}
                                 {% endfor %}
                                 <div class="cart-item px-5 py-4 border-b border-secondary-border/50">
                                     <div class="flex items-center gap-4">
@@ -697,59 +688,20 @@
                                             {% endif %}
                                         </a>
                                         <div class="flex-1 min-w-0">
-                                            <div class="flex items-center justify-between gap-2 mb-0">
+                                            <div class="flex items-start justify-between gap-2">
                                                 <div>
                                                     <a href="{{ item.product.url }}" class="group hover:text-primary transition-colors block mb-1">
                                                         <h3 class="text-sm font-medium text-accent group-hover:text-primary transition-colors">{{ item.product.name | escape }}</h3>
                                                     </a>
                                                     <p class="text-xs text-secondary">
-                                                        {% if totalBundleCompareAtPrice > item.total %}Save {{ totalBundleSavePrice | money }} With These Bundle Items{% else %}Grab This Amazing Bundle Now{% endif %} x {{ item.quantity }}
+                                                        {% for item_bundle in item.bundle_products %}{{ item_bundle.product.name | escape }}{% if item_bundle.name != "Default" %} / {{ item_bundle.name | escape }}{% endif %}{% if not loop.last %}{% if loop.revindex == 2 %} & {% else %}, {% endif %}{% endif %}{% endfor %} x {{ item.quantity }}
                                                     </p>
-                                                    <a href="/cart/change?line={{ loop.index }}&quantity=0" class="text-secondary hover:text-primary transition-colors text-xs inline-flex items-center gap-1 mt-1">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <circle cx="12" cy="12" r="10" stroke-width="1.5"/>
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 9l-6 6M9 9l6 6"/>
-                                                        </svg>
-                                                        Remove
-                                                    </a>
                                                 </div>
                                                 <div class="text-right">
-                                                    {% if totalBundleCompareAtPrice > item.total %}
-                                                        <p class="text-xs text-secondary line-through">{{ totalBundleCompareAtPrice | money }}</p>
-                                                    {% endif %}
-                                                    <p class="text-sm font-medium text-accent">{{ item.total | money }}</p>
+                                                    <p class="text-sm font-medium text-accent">{{ totalBundlePrice | money }}</p>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="mt-4 ml-8 border-l border-secondary-border/30 divide-y divide-secondary-border/20">
-                                        {% for item_bundle in item.bundle_products %}
-                                            <div class="py-3 pl-4 flex gap-3 items-center">
-                                                <a href="{{ item_bundle.product.url }}" class="w-12 h-12 flex-shrink-0 bg-secondary-border/20 rounded overflow-hidden">
-                                                    {% if item_bundle.image is not empty %}
-                                                        <img src="{{ item_bundle.image | product_image_size('small') }}" alt="{{ item_bundle.product.name | escape }}" class="w-full h-full object-cover" loading="lazy">
-                                                    {% elseif item_bundle.product.featured_image is not empty %}
-                                                        <img src="{{ item_bundle.product.featured_image | product_image_size('small') }}" alt="{{ item_bundle.product.name | escape }}" class="w-full h-full object-cover" loading="lazy">
-                                                    {% elseif item.product.featured_image is not empty %}
-                                                        <img src="{{ item.product.featured_image | product_image_size('small') }}" alt="{{ item.product.name | escape }}" class="w-full h-full object-cover" loading="lazy">
-                                                    {% else %}
-                                                        {{ 'product-1' | placeholder_svg_tag }}
-                                                    {% endif %}
-                                                </a>
-                                                <div class="flex-1 min-w-0">
-                                                    <a href="{{ item_bundle.product.url }}" class="text-xs font-medium hover:text-primary transition-colors">
-                                                        {{ item_bundle.product.name | escape }}{% if item_bundle.name != "Default" %} / {{ item_bundle.name | escape }}{% endif %}
-                                                    </a>
-                                                    {% for item_bundle_option in item_bundle.options %}
-                                                        {% if item_bundle_option.name != "Default" %}
-                                                            <p class="text-xs text-secondary">{{ item_bundle_option.name | escape }}: {{ item_bundle_option.value | escape }}</p>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                    <p class="text-xs text-secondary">{{ item_bundle.quantity }}x</p>
-                                                </div>
-                                                <p class="text-xs font-medium text-accent">{{ item_bundle.total | money }}</p>
-                                            </div>
-                                        {% endfor %}
                                     </div>
                                 </div>
                             {% else %}
@@ -766,11 +718,7 @@
                             {%- if not cart_item_image and item.product.featured_image -%}
                                 {%- set cart_item_image = item.product.featured_image -%}
                             {%- endif -%}
-                            <div class="cart-item-wrapper relative overflow-hidden border-b border-secondary-border/50" data-remove-url="/cart/change?line={{ loop.index }}&quantity=0">
-                                <div class="cart-item-delete-bg absolute inset-y-0 right-0 w-20 bg-red-500 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-150">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                </div>
-                                <div class="cart-item px-5 py-4 flex items-center gap-4">
+                            <div class="cart-item px-5 py-4 border-b border-secondary-border/50 flex items-center gap-4">
                                 <!-- Product Image -->
                                 <div class="relative w-[60px] h-[60px] flex-shrink-0">
                                     <a
@@ -825,19 +773,12 @@
                                         </div>
 
                                         <div class="ml-2 text-right">
-                                            {% if item.compare_at_price and item.compare_at_price > item.price %}
-                                                {% set compare_total = item.compare_at_price * item.quantity %}
-                                                <p class="text-xs text-secondary line-through">
-                                                    {{ compare_total | money }}
-                                                </p>
-                                            {% endif %}
                                             <p class="text-base font-medium text-accent">
                                                 {{ item.total | money }}
                                             </p>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
                             </div>
                             {% endif %}
                         {% endfor %}
@@ -1117,74 +1058,6 @@
             {{ page.metafields.builder.js }}
         </script>
     {% endif %}
-
-    <!-- Swipe to delete cart items -->
-    <script>
-    (function(){
-        var THRESHOLD = 80; // px to trigger delete
-
-        function initSwipe(wrapper){
-            var inner = wrapper.querySelector('.cart-item'),
-                deleteBg = wrapper.querySelector('.cart-item-delete-bg'),
-                removeUrl = wrapper.dataset.removeUrl,
-                startX = 0, currentX = 0, dragging = false;
-
-            function onStart(clientX){
-                startX = clientX;
-                currentX = 0;
-                dragging = true;
-                inner.style.transition = 'none';
-                inner.style.cursor = 'grabbing';
-            }
-
-            function onMove(clientX){
-                if(!dragging) return;
-                var dx = clientX - startX;
-                if(dx > 0) return;
-                currentX = dx;
-                inner.style.transform = 'translateX(' + currentX + 'px)';
-                deleteBg.style.opacity = Math.min(Math.abs(currentX) / THRESHOLD, 1);
-            }
-
-            function onEnd(){
-                if(!dragging) return;
-                dragging = false;
-                inner.style.cursor = '';
-                inner.style.transition = 'transform 0.25s ease';
-                if(Math.abs(currentX) >= THRESHOLD){
-                    inner.style.transform = 'translateX(-100%)';
-                    deleteBg.style.opacity = '1';
-                    setTimeout(function(){ window.location.href = removeUrl; }, 250);
-                } else {
-                    inner.style.transform = 'translateX(0)';
-                    deleteBg.style.opacity = '0';
-                }
-            }
-
-            // Touch
-            inner.addEventListener('touchstart', function(e){ onStart(e.touches[0].clientX); }, {passive: true});
-            inner.addEventListener('touchmove',  function(e){ onMove(e.touches[0].clientX); },  {passive: true});
-            inner.addEventListener('touchend',   onEnd);
-
-            // Mouse
-            inner.addEventListener('mousedown', function(e){ onStart(e.clientX); });
-            document.addEventListener('mousemove', function(e){ if(dragging) onMove(e.clientX); });
-            document.addEventListener('mouseup', onEnd);
-        }
-
-        function attachSwipe(){
-            document.querySelectorAll('.cart-item-wrapper').forEach(initSwipe);
-        }
-
-        document.addEventListener('DOMContentLoaded', attachSwipe);
-
-        // Re-attach after cart updates (MutationObserver on #cart-items)
-        var cartItems = document.getElementById('cart-items');
-        if(cartItems){
-            new MutationObserver(attachSwipe).observe(cartItems, {childList: true, subtree: true});
-        }
-    })();
-    </script>
 
     <!-- Cloudflare Web Analytics -->
     <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "aecf724216724271b6e368efb7fa20aa"}'></script>

@@ -438,7 +438,7 @@
                                     <tbody class="divide-y divide-secondary-border/30">
                                         {% for indexWholesale, wholesale in product.wholesale_prices %}
                                             {% set wholesaleMaxQuantity = wholesale.maximum_quantity %}
-                                            <input type="hidden" id="wholesalePrice_{{ indexWholesale }}" data-min-quantity="{{ wholesale.minimum_quantity }}" data-max-quantity="{{ wholesaleMaxQuantity }}" data-price="{{ wholesale.unit_price | money }}" data-currency="{{ store.currency_format }}">
+                                            <input type="hidden" id="wholesalePrice_{{ indexWholesale }}" data-min-quantity="{{ wholesale.minimum_quantity }}" data-max-quantity="{{ wholesaleMaxQuantity }}" data-price="{{ wholesale.unit_price | money }}">
                                             {% if wholesale.maximum_quantity is null %}
                                                 {% set wholesaleQuantity = '' ~ wholesale.minimum_quantity ~ ' or more' %}
                                             {% else %}

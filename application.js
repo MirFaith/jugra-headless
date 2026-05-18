@@ -1282,7 +1282,7 @@ function updatePriceText(variantId = null){
 
             if(currentQuantity >= minQuantity && maxApplies){
                 formattedProductPrice = $(this).data('price');
-                currencyType = $(this).data('currency') || getMoneyCurrency(formattedProductPrice, currencyType);
+                currencyType = getMoneyCurrency(formattedProductPrice, currencyType);
                 return false;
             }
         });
