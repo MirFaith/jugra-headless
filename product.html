@@ -568,7 +568,7 @@
                                                                 >
                                                                     {% if optionVariantImage %}
                                                                         <div class="w-14 h-14 flex-shrink-0 bg-secondary-border/10 overflow-hidden">
-                                                                            <img src="{{ optionVariantImage }}" alt="{{ value.name }}" class="w-full h-full object-cover">
+                                                                            <img src="{{ optionVariantImage | product_image_size('small') }}" alt="{{ value.name }}" class="w-full h-full object-cover">
                                                                         </div>
                                                                     {% endif %}
                                                                     <span class="{% if optionVariantImage %}pr-3{% endif %}">{{ value.name }}</span>
@@ -613,7 +613,7 @@
                                                 {% if variant.image %}data-slide-index="{{ variantSlideIndex }}"{% endif %}
                                             >
                                                 {% if variant.image %}
-                                                    <img src="{{ variant.image }}" alt="{{ variant.name }}" class="w-14 h-14 object-contain flex-shrink-0">
+                                                    <img src="{{ variant.image | product_image_size('small') }}" alt="{{ variant.name }}" class="w-14 h-14 object-contain flex-shrink-0">
                                                 {% endif %}
                                                 <span>{{ variant.name }}</span>
                                                 <span class="variant-active-indicator absolute bottom-0 right-0 hidden">

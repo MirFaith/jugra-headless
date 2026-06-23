@@ -37,3 +37,6 @@ Fixed option buttons should appear sold-out based on the currently-selected comb
 ### Version 1.4.3
 - Fixed product bundle display at cart page
 - Re-enable the product wholesale functions
+
+### Version 1.4.4
+- Fixed variant thumbnail image use small product image size
