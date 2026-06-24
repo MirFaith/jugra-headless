@@ -549,6 +549,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    window.showVariantCarouselSlide = function(variantId) {
+        var matchingSlideIndex = -1;
+
+        carouselSlides.forEach(function(slide, index) {
+            if (String(slide.getAttribute('data-variant-id')) === String(variantId)) {
+                matchingSlideIndex = index;
+            }
+        });
+
+        if (matchingSlideIndex >= 0 && typeof window.showCarouselSlide === 'function') {
+            window.showCarouselSlide(matchingSlideIndex);
+            window.currentCarouselSlide = matchingSlideIndex;
+            return true;
+        }
+
+        return false;
+    }
+
     function nextCarouselSlide() {
         window.currentCarouselSlide = (window.currentCarouselSlide + 1) % carouselSlides.length;
         window.showCarouselSlide(window.currentCarouselSlide);
@@ -790,6 +808,10 @@ $(document).ready(function() {
         $('#max-product-quantity').text(0);
         $('#max-product-quantity').attr('value', 0);
 
+        if (typeof window.showVariantCarouselSlide === 'function') {
+            window.showVariantCarouselSlide(variant_id);
+        }
+
         if(selected_variant.data('available')){
             updateSelectedOptionsVariant(selected_variant);// must update variant first
             enableButtons();
@@ -819,11 +841,9 @@ $(document).ready(function() {
         btn.removeClass('border-secondary-border').addClass('border-primary');
         btn.find('.variant-active-indicator').removeClass('hidden');
 
-        // Navigate to variant image in carousel if available
-        var slideIndex = btn.data('slide-index');
-        if (typeof slideIndex !== 'undefined' && typeof window.showCarouselSlide === 'function') {
-            window.showCarouselSlide(slideIndex);
-            window.currentCarouselSlide = slideIndex;
+        // Navigate using the variant id, so the real rendered slide order is the source of truth.
+        if (typeof window.showVariantCarouselSlide === 'function') {
+            window.showVariantCarouselSlide(variant_id);
         }
 
         disabledButtons();
@@ -938,13 +958,6 @@ $(document).ready(function() {
         btn.closest('.option-value-group').find('.select-option-btn .option-active-indicator').addClass('hidden');
         btn.removeClass('border-secondary-border').addClass('border-primary');
         btn.find('.option-active-indicator').removeClass('hidden');
-
-        // Navigate to variant image in carousel if available
-        var slideIndex = btn.data('slide-index');
-        if (typeof slideIndex !== 'undefined' && typeof window.showCarouselSlide === 'function') {
-            window.showCarouselSlide(slideIndex);
-            window.currentCarouselSlide = slideIndex;
-        }
 
         // Update the hidden input for this option (even if sold out, so price updates)
         btn.closest('.mb-4').find('.selected-option-value').val(optionValue);
@@ -1202,6 +1215,9 @@ function processSelectOptions(selectedObject){
             selected_variant = $("#variant_" + variant);
 
             updateSelectedOptionsVariant(selected_variant); // update selected variant first
+            if (typeof window.showVariantCarouselSlide === 'function') {
+                window.showVariantCarouselSlide(variant);
+            }
             if(selected_variant.data('available')){
                 enableButtons();
                 updatePriceText();

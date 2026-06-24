@@ -37,7 +37,7 @@
                             <!-- Variant Images -->
                             {% for variant in product.variants %}
                                 {% if variant.image %}
-                                    <div class="carousel-slide flex items-center justify-center">
+                                    <div class="carousel-slide flex items-center justify-center" data-variant-id="{{ variant.id }}">
                                         <img
                                             src="{{ variant.image | product_image_size('large') }}"
                                             alt="{{ product.name | escape }} - {{ variant.name }}"
@@ -521,7 +521,6 @@
                                                 {% if is_selectable_option and not is_default_variant %}
                                                     <input type="hidden" class="selected-option-value" name="options[{{ option.id }}]" data-option-key="{{ option.name }}" value="" required>
                                                     <div class="option-value-group {% if option.type == 'swatch' %}flex flex-wrap gap-3{% else %}grid grid-cols-2 gap-3{% endif %}">
-                                                        {%- set optionSlideIndex = product.images | length -%}
                                                         {% for value in option.values %}
                                                             {%- set optionVariantAvailable = false -%}
                                                             {%- set optionVariantImage = value.image -%}
@@ -543,7 +542,6 @@
                                                                     data-option-value="{{ value.name }}"
                                                                     title="{{ value.name | escape }}"
                                                                     aria-label="{{ value.name | escape }}"
-                                                                    {% if optionVariantImage %}data-slide-index="{{ optionSlideIndex }}"{% endif %}
                                                                     {% if not optionVariantAvailable %}data-sold-out="true"{% endif %}
                                                                 >
                                                                     <span class="flex h-full w-full flex-col">
@@ -563,7 +561,6 @@
                                                                     class="option-button select-option-btn relative w-full border border-secondary-border text-accent text-sm font-medium hover:border-primary transition-all flex items-center overflow-hidden {% if optionVariantImage %}justify-start gap-4{% else %}px-4 py-3 justify-center{% endif %} {% if not optionVariantAvailable %}opacity-30{% endif %}"
                                                                     data-option-name="{{ option.name }}"
                                                                     data-option-value="{{ value.name }}"
-                                                                    {% if optionVariantImage %}data-slide-index="{{ optionSlideIndex }}"{% endif %}
                                                                     {% if not optionVariantAvailable %}data-sold-out="true"{% endif %}
                                                                 >
                                                                     {% if optionVariantImage %}
@@ -580,7 +577,6 @@
                                                                     </span>
                                                                 </button>
                                                             {%- endif -%}
-                                                            {%- if optionVariantImage -%}{%- set optionSlideIndex = optionSlideIndex + 1 -%}{%- endif -%}
                                                         {% endfor %}
                                                     </div>
                                                 {% elseif option.type == 'date' %}
@@ -603,14 +599,12 @@
                                         Select Option
                                     </label>
                                     <div class="grid grid-cols-2 gap-3">
-                                        {%- set variantSlideIndex = product.images | length -%}
                                         {% for variant in product.variants %}
                                             <button
                                                 type="button"
                                                 class="variant-button select-variant-btn relative w-full px-4 py-3 border border-secondary-border text-accent text-sm font-medium hover:border-primary transition-all flex items-center overflow-hidden {% if variant.image %}justify-start gap-3{% else %}justify-center{% endif %} {% if variant.available == false %}opacity-30{% endif %}"
                                                 data-variant-id="{{ variant.id }}"
                                                 {% if variant.available == false %}data-sold-out="true"{% endif %}
-                                                {% if variant.image %}data-slide-index="{{ variantSlideIndex }}"{% endif %}
                                             >
                                                 {% if variant.image %}
                                                     <img src="{{ variant.image | product_image_size('small') }}" alt="{{ variant.name }}" class="w-14 h-14 object-contain flex-shrink-0">
@@ -623,7 +617,6 @@
                                                     </svg>
                                                 </span>
                                             </button>
-                                            {%- if variant.image -%}{%- set variantSlideIndex = variantSlideIndex + 1 -%}{%- endif -%}
                                         {% endfor %}
                                     </div>
                                 </div>
