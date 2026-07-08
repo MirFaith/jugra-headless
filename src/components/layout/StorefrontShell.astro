@@ -108,6 +108,46 @@ const announcements = [
     }, 4000);
   }
 
+  function loadProductImage(image: HTMLImageElement) {
+    const src = image.dataset.src;
+    if (!src) return;
+
+    image.src = src;
+    image.removeAttribute('data-src');
+    image.addEventListener('load', () => image.classList.remove('opacity-0'), { once: true });
+  }
+
+  let productImageObserver: IntersectionObserver | null = null;
+
+  function initProductLazyImages(root: ParentNode = document) {
+    const productImages = root.querySelectorAll<HTMLImageElement>('img[data-product-lazy-image]:not([data-lazy-observed])');
+
+    if ('IntersectionObserver' in window) {
+      productImageObserver ||= new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+
+          const image = entry.target as HTMLImageElement;
+          observer.unobserve(image);
+          loadProductImage(image);
+        });
+      }, {
+        rootMargin: '0px'
+      });
+
+      productImages.forEach((image) => {
+        image.dataset.lazyObserved = 'true';
+        productImageObserver?.observe(image);
+      });
+      return;
+    }
+
+    productImages.forEach(loadProductImage);
+  }
+
+  initProductLazyImages();
+  window.addEventListener('jugra:product-images-added', () => initProductLazyImages());
+
   const cartRoot = document.getElementById('cart-drawer');
   const cartContent = document.getElementById('cart-drawer-content');
   const cartStatus = document.getElementById('cart-drawer-status');

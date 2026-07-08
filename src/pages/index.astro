@@ -1,30 +1,33 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
-import CollectionRows from '@components/collection/CollectionRows.astro';
 import Hero from '@components/home/Hero.astro';
-import ProductGrid from '@components/product/ProductGrid.astro';
-import { CollectionService, ProductService, StoreService } from '@services/index';
+import { StoreService } from '@services/index';
 
-const [store, productEnvelope, collections] = await Promise.all([
-  StoreService.getStore(),
-  ProductService.list(1),
-  CollectionService.list()
-]);
-const featuredProducts = productEnvelope.data.slice(0, 6);
-const featuredCollections = collections.slice(0, 3);
+const store = await StoreService.getStore();
+const currencyJson = JSON.stringify(store.currency);
 ---
 
 <BaseLayout title={`${store.name} | Headless Storefront`} description={`Shop products from ${store.name}.`}>
   <main>
     <Hero />
 
-    <section class="bg-card py-10 md:py-16" id="featured">
+    <section class="bg-card py-10 md:py-16" id="featured" data-home-products data-currency={currencyJson}>
       <div class="mx-auto max-w-6xl px-5">
         <h2 class="mb-12 text-center font-display text-3xl font-semibold md:text-4xl">
           All Products
         </h2>
-        <ProductGrid products={featuredProducts} currency={store.currency} />
-        <div class="text-center">
+        <div data-home-products-content>
+          <div class="mb-12 grid grid-cols-2 gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3" aria-hidden="true">
+            {Array.from({ length: 4 }).map(() => (
+              <div>
+                <div class="mb-4 aspect-square animate-pulse bg-secondary-border/20"></div>
+                <div class="mx-auto mb-3 h-4 w-24 animate-pulse bg-secondary-border/40"></div>
+                <div class="mx-auto h-3 w-16 animate-pulse bg-secondary-border/30"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div class="text-center" data-home-products-action>
           <a
             href="/products"
             class="inline-block border-2 border-primary px-8 py-3.5 text-xs font-semibold uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-white"
@@ -35,15 +38,210 @@ const featuredCollections = collections.slice(0, 3);
       </div>
     </section>
 
-    {featuredCollections.length > 0 && (
-      <section class="bg-card py-16 md:py-20">
-        <div class="mx-auto max-w-6xl px-5">
-          <h2 class="mb-12 text-center font-display text-3xl font-semibold md:text-4xl">
-            Our collections
-          </h2>
-          <CollectionRows collections={featuredCollections} />
+    <section class="hidden bg-card py-16 md:py-20" data-home-collections>
+      <div class="mx-auto max-w-6xl px-5">
+        <h2 class="mb-12 text-center font-display text-3xl font-semibold md:text-4xl">
+          Our collections
+        </h2>
+        <div data-home-collections-content></div>
+      </div>
+    </section>
+
+    <noscript>
+      <section class="bg-card py-10 md:py-16">
+        <div class="mx-auto max-w-6xl px-5 text-center">
+          <a
+            href="/products"
+            class="inline-block border-2 border-primary px-8 py-3.5 text-xs font-semibold uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-white"
+          >
+            View products
+          </a>
         </div>
       </section>
-    )}
+    </noscript>
   </main>
+
+  <script>
+    import type { ShoppegoCurrency } from '@models/shoppego';
+
+    interface HomepageProduct {
+      name: string;
+      slug: string;
+      price: number;
+      compare_at_price_min: number | null;
+      compare_at_price_max: number | null;
+      price_varies: boolean;
+      available: boolean;
+      featured_image: string | null;
+    }
+
+    interface HomepageCollection {
+      name: string;
+      slug: string;
+    }
+
+    interface HomepagePayload {
+      products: HomepageProduct[];
+      collections: HomepageCollection[];
+    }
+
+    const productSection = document.querySelector<HTMLElement>('[data-home-products]');
+    const productContent = document.querySelector<HTMLElement>('[data-home-products-content]');
+    const productAction = document.querySelector<HTMLElement>('[data-home-products-action]');
+    const collectionSection = document.querySelector<HTMLElement>('[data-home-collections]');
+    const collectionContent = document.querySelector<HTMLElement>('[data-home-collections-content]');
+    const currency = JSON.parse(productSection?.dataset.currency || '{}') as ShoppegoCurrency;
+
+    function escapeHtml(value: string): string {
+      return value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function formatMoney(amount: number): string {
+      const decimals = Number.isInteger(currency.decimal_digits) ? currency.decimal_digits : 2;
+      const fixed = Number(amount || 0).toFixed(decimals);
+      const [whole, fraction] = fixed.split('.');
+      const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, currency.thousand_separator || ',');
+      return `${currency.symbol || ''}${grouped}${decimals > 0 ? `.${fraction}` : ''}`;
+    }
+
+    function productPath(product: HomepageProduct): string {
+      return `/products/${encodeURIComponent(product.slug)}`;
+    }
+
+    function collectionPath(collection: HomepageCollection): string {
+      return `/categories/${encodeURIComponent(collection.slug)}`;
+    }
+
+    function productImage(product: HomepageProduct): string {
+      if (!product.featured_image) {
+        return '<div class="aspect-square w-full bg-secondary-border/20"></div>';
+      }
+
+      const image = escapeHtml(product.featured_image);
+      const name = escapeHtml(product.name);
+
+      return `
+        <img
+          data-product-lazy-image
+          data-src="${image}"
+          alt="${name}"
+          class="aspect-square h-auto w-full object-cover opacity-0 transition-all duration-500 group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
+          width="640"
+          height="640"
+          sizes="(min-width: 1024px) 360px, (min-width: 768px) 50vw, 50vw"
+        />
+      `;
+    }
+
+    function productCard(product: HomepageProduct): string {
+      const compareAtPrice = product.compare_at_price_min || product.compare_at_price_max;
+      const compareAt = compareAtPrice && compareAtPrice > product.price
+        ? `<p class="text-sm text-secondary line-through">${formatMoney(compareAtPrice)}</p>`
+        : '';
+
+      return `
+        <div class="group">
+          <a href="${productPath(product)}" class="block">
+            <div class="relative mb-4 overflow-hidden bg-secondary-border/20">
+              ${!product.available ? `
+                <div class="absolute inset-0 z-10 flex items-center justify-center">
+                  <div class="flex h-16 w-16 flex-col items-center justify-center rounded-full bg-primary/80 text-[10px] font-semibold uppercase leading-tight tracking-wider text-white md:h-20 md:w-20 md:text-xs">
+                    <span>Sold</span>
+                    <span>Out</span>
+                  </div>
+                </div>
+              ` : ''}
+              ${productImage(product)}
+            </div>
+            <div class="text-center">
+              <h3 class="mb-2 text-base font-medium transition-colors group-hover:text-primary">
+                ${escapeHtml(product.name)}
+              </h3>
+              <div class="flex items-center justify-center gap-2">
+                ${compareAt}
+                <p class="text-sm text-secondary">
+                  ${formatMoney(product.price)}
+                  ${product.price_varies ? '<sup>+</sup>' : ''}
+                </p>
+              </div>
+            </div>
+          </a>
+        </div>
+      `;
+    }
+
+    function collectionRows(collections: HomepageCollection[]): string {
+      return `
+        <div class="space-y-12 md:space-y-16">
+          ${collections.map((collection, index) => {
+            const isEven = (index + 1) % 2 === 0;
+
+            return `
+              <div class="grid grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-20">
+                <div class="${isEven ? 'md:order-2' : ''}">
+                  <a href="${collectionPath(collection)}" class="group block">
+                    <div class="relative aspect-square overflow-hidden bg-secondary-border/20"></div>
+                  </a>
+                </div>
+                <div class="${isEven ? 'md:order-1 ' : ''}text-center md:text-left">
+                  <h3 class="mb-4 font-display text-2xl font-semibold text-accent md:text-3xl">
+                    ${escapeHtml(collection.name)}
+                  </h3>
+                  <a
+                    href="${collectionPath(collection)}"
+                    class="inline-block border-2 border-primary px-8 py-3.5 text-xs font-semibold uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-white"
+                  >
+                    View collection
+                  </a>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    async function loadHomepageCatalog() {
+      try {
+        const response = await fetch('/api/homepage.json', {
+          headers: { Accept: 'application/json' }
+        });
+
+        if (!response.ok) throw new Error('Homepage catalog request failed.');
+
+        const data = await response.json() as HomepagePayload;
+
+        if (productContent) {
+          productContent.innerHTML = data.products.length
+            ? `<div class="mb-12 grid grid-cols-2 gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">${data.products.map(productCard).join('')}</div>`
+            : '<div class="py-12 text-center"><p class="text-secondary">No products available at the moment. Check back soon!</p></div>';
+        }
+
+        productAction?.classList.remove('hidden');
+
+        if (collectionSection && collectionContent && data.collections.length > 0) {
+          collectionContent.innerHTML = collectionRows(data.collections);
+          collectionSection.classList.remove('hidden');
+        }
+
+        window.dispatchEvent(new CustomEvent('jugra:product-images-added'));
+      } catch {
+        productContent?.classList.add('hidden');
+        productAction?.classList.remove('hidden');
+      }
+    }
+
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(loadHomepageCatalog, { timeout: 1200 });
+    } else {
+      globalThis.setTimeout(loadHomepageCatalog, 1);
+    }
+  </script>
 </BaseLayout>

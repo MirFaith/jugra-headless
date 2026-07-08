@@ -25,12 +25,31 @@ const compareAtPrice = product.compare_at_price_min || product.compare_at_price_
       )}
 
       {product.featured_image ? (
-        <img
-          src={product.featured_image}
-          alt={product.name}
-          class="h-auto w-full transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
+        <>
+          <img
+            data-product-lazy-image
+            data-src={product.featured_image}
+            alt={product.name}
+            class="aspect-square h-auto w-full object-cover opacity-0 transition-all duration-500 group-hover:scale-105"
+            loading="lazy"
+            decoding="async"
+            width="640"
+            height="640"
+            sizes="(min-width: 1024px) 360px, (min-width: 768px) 50vw, 50vw"
+          />
+          <noscript>
+            <img
+              src={product.featured_image}
+              alt={product.name}
+              class="aspect-square h-auto w-full object-cover"
+              loading="lazy"
+              decoding="async"
+              width="640"
+              height="640"
+              sizes="(min-width: 1024px) 360px, (min-width: 768px) 50vw, 50vw"
+            />
+          </noscript>
+        </>
       ) : (
         <div class="aspect-square w-full bg-secondary-border/20"></div>
       )}
