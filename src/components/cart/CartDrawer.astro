@@ -1,0 +1,37 @@
+---
+import type { ShoppegoCurrency } from '@models/shoppego';
+
+interface Props {
+  currency: ShoppegoCurrency;
+}
+
+const { currency } = Astro.props;
+const currencyJson = JSON.stringify(currency);
+---
+
+<div id="cart-drawer" data-currency={currencyJson} class="invisible fixed inset-0 z-50 bg-dark-primary/30 opacity-0 backdrop-blur-sm transition-all duration-300">
+  <aside id="cart-drawer-panel" class="fixed bottom-0 right-0 top-0 flex w-full translate-x-full flex-col overflow-y-auto bg-card shadow-2xl transition-transform duration-300 ease-out md:w-[450px]" aria-label="Shopping cart">
+    <div class="flex items-center justify-between border-b border-secondary-border/50 px-5 py-5">
+      <h2 class="font-display text-2xl font-semibold text-accent">Shopping cart</h2>
+      <button id="cart-drawer-close" type="button" class="text-accent hover:text-primary" aria-label="Close cart">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    <div id="cart-drawer-status" class="hidden border-b border-secondary-border/40 px-5 py-3 text-sm"></div>
+    <div id="cart-drawer-content" class="flex flex-1 flex-col">
+      <div class="flex flex-1 flex-col items-center justify-center px-5 py-10">
+        <p class="mb-2 text-lg font-medium text-accent">Your cart is empty</p>
+        <p class="mb-6 text-center text-sm text-secondary">Add some products to get started</p>
+        <button
+          id="continue-shopping"
+          type="button"
+          class="inline-block border-2 border-primary px-8 py-3.5 text-xs font-semibold uppercase tracking-widest text-primary hover:bg-primary hover:text-white"
+        >
+          Continue Shopping
+        </button>
+      </div>
+    </div>
+  </aside>
+</div>

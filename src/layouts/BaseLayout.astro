@@ -1,0 +1,43 @@
+---
+import '@styles/global.css';
+import StorefrontShell from '@components/layout/StorefrontShell.astro';
+import { MenuService, StoreService } from '@services/index';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'Jugra',
+  description = 'A minimalist headless storefront powered by Shoppego.'
+} = Astro.props;
+
+const [store, menus] = await Promise.all([
+  StoreService.getStore(),
+  MenuService.list()
+]);
+const mainMenu = menus.find((menu) => menu.handle === 'main_menu') || menus[0] || null;
+const footerMenu = menus.find((menu) => menu.handle === 'footer_menu') || null;
+---
+
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Karla:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <StorefrontShell store={store} mainMenu={mainMenu} footerMenu={footerMenu}>
+      <slot />
+    </StorefrontShell>
+  </body>
+</html>

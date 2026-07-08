@@ -1,0 +1,40 @@
+---
+import type { ShoppegoPaginationMeta } from '@models/shoppego';
+
+interface Props {
+  meta?: ShoppegoPaginationMeta;
+  basePath: string;
+  query?: string;
+}
+
+const { meta, basePath, query = '' } = Astro.props;
+
+function pageHref(page: number) {
+  const params = new URLSearchParams();
+  if (page > 1) params.set('page', String(page));
+  if (query) params.set('q', query);
+  const suffix = params.toString();
+  return suffix ? `${basePath}?${suffix}` : basePath;
+}
+---
+
+{meta && meta.last_page > 1 && (
+  <nav class="flex items-center justify-center gap-4" aria-label="Products pagination">
+    {meta.current_page > 1 && (
+      <a
+        href={pageHref(meta.current_page - 1)}
+        class="inline-flex w-36 items-center justify-center gap-2 border-2 border-primary bg-transparent px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-white"
+      >
+        Previous
+      </a>
+    )}
+    {meta.current_page < meta.last_page && (
+      <a
+        href={pageHref(meta.current_page + 1)}
+        class="inline-flex w-36 items-center justify-center gap-2 border-2 border-primary bg-transparent px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-white"
+      >
+        Next
+      </a>
+    )}
+  </nav>
+)}

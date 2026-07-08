@@ -1,0 +1,94 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHeader from '@components/content/PageHeader.astro';
+import { StoreService } from '@services/index';
+
+const store = await StoreService.getStore();
+---
+
+<BaseLayout title={`Checkout | ${store.name}`} description={`Start secure checkout for ${store.name}.`}>
+  <main>
+    <section class="min-h-[70vh] bg-card py-10 md:py-16">
+      <div class="mx-auto max-w-4xl px-5 text-center">
+        <PageHeader
+          eyebrow="Checkout"
+          title="Secure checkout"
+          description="Checkout is created from the cart in this browser, then completed on Shoppego's hosted checkout."
+        />
+        <div id="checkout-page-status" class="mx-auto mb-8 max-w-xl border border-secondary-border/50 bg-secondary-border/10 px-5 py-4 text-sm text-secondary">
+          Preparing your checkout...
+        </div>
+        <div class="flex flex-col items-center justify-center gap-3 md:flex-row">
+          <button
+            id="checkout-page-button"
+            type="button"
+            class="border-2 border-primary bg-primary px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Continue to checkout
+          </button>
+          <button
+            id="checkout-cart-button"
+            type="button"
+            class="border-2 border-primary bg-transparent px-8 py-4 text-sm font-semibold uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-white"
+          >
+            Review cart
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  import { CheckoutService } from '@services/CheckoutService';
+  import { CartService } from '@services/CartService';
+  import { cartStore } from '@stores/cartStore';
+
+  const status = document.getElementById('checkout-page-status');
+  const checkoutButton = document.getElementById('checkout-page-button') as HTMLButtonElement | null;
+
+  function setStatus(message: string, isError = false) {
+    if (!status) return;
+    status.textContent = message;
+    status.classList.toggle('border-red-200', isError);
+    status.classList.toggle('bg-red-50', isError);
+    status.classList.toggle('text-red-700', isError);
+  }
+
+  async function startCheckout() {
+    const cart = cartStore.read();
+
+    if (!cart.lines.length) {
+      setStatus('Your cart is empty. Add a product before starting checkout.', true);
+      checkoutButton?.setAttribute('disabled', 'true');
+      return;
+    }
+
+    if (checkoutButton) {
+      checkoutButton.disabled = true;
+      checkoutButton.textContent = 'Opening checkout...';
+    }
+    setStatus('Checking item availability...');
+
+    try {
+      const checkout = await CheckoutService.createCheckout(CartService.toCheckoutInput(cart));
+      window.location.href = checkout.checkout_url;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Checkout could not be created.';
+      setStatus(message, true);
+      if (checkoutButton) {
+        checkoutButton.disabled = false;
+        checkoutButton.textContent = 'Continue to checkout';
+      }
+    }
+  }
+
+  checkoutButton?.addEventListener('click', startCheckout);
+  document.getElementById('checkout-cart-button')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('jugra:open-cart'));
+  });
+
+  const cart = cartStore.read();
+  setStatus(cart.lines.length ? 'Ready to create a secure Shoppego checkout.' : 'Your cart is empty. Add a product before starting checkout.', !cart.lines.length);
+  if (!cart.lines.length) checkoutButton?.setAttribute('disabled', 'true');
+</script>

@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-accent antialiased font-sans;
+  }
+
+  a {
+    @apply transition-colors;
+  }
+}
+
+@layer components {
+  .announcement-slider {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .announcement-slide {
+    position: absolute;
+    width: 100%;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+  }
+
+  .announcement-slide.active {
+    position: relative;
+    opacity: 1;
+  }
+
+  .prose-jugra {
+    max-width: 65ch;
+    line-height: 1.7;
+  }
+
+  .prose-jugra p {
+    margin-bottom: 1.25em;
+  }
+
+  .prose-jugra h1,
+  .prose-jugra h2,
+  .prose-jugra h3,
+  .prose-jugra h4,
+  .prose-jugra h5,
+  .prose-jugra h6 {
+    @apply font-display font-semibold text-accent;
+    line-height: 1.3;
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
+  }
+}

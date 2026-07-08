@@ -1,0 +1,33 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import CollectionCard from '@components/collection/CollectionCard.astro';
+import { CollectionService, StoreService } from '@services/index';
+
+const [store, collections] = await Promise.all([
+  StoreService.getStore(),
+  CollectionService.list()
+]);
+---
+
+<BaseLayout title={`Collections | ${store.name}`} description={`Browse ${store.name} collections.`}>
+  <main>
+    <section class="min-h-[80vh] bg-card py-10 md:py-16">
+      <div class="mx-auto max-w-6xl px-5">
+        <h1 class="mb-12 text-center font-display text-3xl font-semibold md:text-4xl">
+          Collections
+        </h1>
+        {collections.length > 0 ? (
+          <div class="mb-12 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+            {collections.map((collection) => (
+              <CollectionCard collection={collection} />
+            ))}
+          </div>
+        ) : (
+          <div class="py-12 text-center">
+            <p class="text-secondary">No collections available at the moment.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  </main>
+</BaseLayout>

@@ -1,0 +1,56 @@
+---
+import type { ShoppegoCurrency, ShoppegoProduct } from '@models/shoppego';
+import { formatMoney } from '@utils/money';
+import { productPath } from '@utils/routes';
+
+interface Props {
+  product: ShoppegoProduct;
+  currency: ShoppegoCurrency;
+}
+
+const { product, currency } = Astro.props;
+const compareAtPrice = product.compare_at_price_min || product.compare_at_price_max;
+---
+
+<div class="group">
+  <a href={productPath(product)} class="block">
+    <div class="relative mb-4 overflow-hidden bg-secondary-border/20">
+      {!product.available && (
+        <div class="absolute inset-0 z-10 flex items-center justify-center">
+          <div class="flex h-16 w-16 flex-col items-center justify-center rounded-full bg-primary/80 text-[10px] font-semibold uppercase leading-tight tracking-wider text-white md:h-20 md:w-20 md:text-xs">
+            <span>Sold</span>
+            <span>Out</span>
+          </div>
+        </div>
+      )}
+
+      {product.featured_image ? (
+        <img
+          src={product.featured_image}
+          alt={product.name}
+          class="h-auto w-full transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+        />
+      ) : (
+        <div class="aspect-square w-full bg-secondary-border/20"></div>
+      )}
+    </div>
+
+    <div class="text-center">
+      <h3 class="mb-2 text-base font-medium transition-colors group-hover:text-primary">
+        {product.name}
+      </h3>
+      <div class="flex items-center justify-center gap-2">
+        {compareAtPrice && compareAtPrice > product.price && (
+          <p class="text-sm text-secondary line-through">
+            {formatMoney(compareAtPrice, currency)}
+          </p>
+        )}
+        <p class="text-sm text-secondary">
+          {formatMoney(product.price, currency)}
+          {product.price_varies && <sup>+</sup>}
+        </p>
+      </div>
+    </div>
+  </a>
+</div>

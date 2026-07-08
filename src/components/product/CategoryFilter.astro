@@ -1,0 +1,34 @@
+---
+import type { ShoppegoCollection } from '@models/shoppego';
+import { collectionPath } from '@utils/routes';
+
+interface Props {
+  collections: ShoppegoCollection[];
+  activeSlug?: string;
+}
+
+const { collections, activeSlug } = Astro.props;
+---
+
+<nav class="mb-12 flex flex-wrap justify-center gap-6" aria-label="Product categories">
+  <a
+    href="/products"
+    class:list={[
+      'text-base font-medium text-accent hover:text-primary',
+      !activeSlug && 'underline'
+    ]}
+  >
+    All
+  </a>
+  {collections.map((collection) => (
+    <a
+      href={collectionPath(collection)}
+      class:list={[
+        'text-base font-medium text-accent hover:text-primary',
+        activeSlug === collection.slug && 'underline'
+      ]}
+    >
+      {collection.name}
+    </a>
+  ))}
+</nav>

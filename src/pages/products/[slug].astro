@@ -1,0 +1,38 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ProductDetail from '@components/product/ProductDetail.astro';
+import ProductGrid from '@components/product/ProductGrid.astro';
+import { ProductService, StoreService } from '@services/index';
+
+export async function getStaticPaths() {
+  const products = await ProductService.listAll();
+
+  return products.map((product) => ({
+    params: { slug: product.slug },
+    props: {
+      product,
+      relatedProducts: products.filter((item) => item.slug !== product.slug).slice(0, 3)
+    }
+  }));
+}
+
+const { product, relatedProducts } = Astro.props;
+const store = await StoreService.getStore();
+---
+
+<BaseLayout title={`${product.name} | ${store.name}`} description={product.description?.replace(/<[^>]*>/g, '').slice(0, 150) || `Shop ${product.name} from ${store.name}.`}>
+  <main>
+    <ProductDetail product={product} currency={store.currency} />
+
+    {relatedProducts.length > 0 && (
+      <section class="bg-card py-10 md:py-16">
+        <div class="mx-auto max-w-6xl px-5">
+          <h2 class="mb-12 text-center font-display text-3xl font-semibold md:text-4xl">
+            You may also like
+          </h2>
+          <ProductGrid products={relatedProducts} currency={store.currency} />
+        </div>
+      </section>
+    )}
+  </main>
+</BaseLayout>

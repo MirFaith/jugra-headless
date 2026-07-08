@@ -1,0 +1,42 @@
+---
+import type { ShoppegoMenu, ShoppegoStore } from '@models/shoppego';
+import { normalizeMenuUrl } from '@utils/routes';
+
+interface Props {
+  store: ShoppegoStore;
+  footerMenu: ShoppegoMenu | null;
+}
+
+const { store, footerMenu } = Astro.props;
+---
+
+<footer class="border-t border-secondary-border/30 bg-card py-16">
+  <div class="mx-auto max-w-6xl px-5">
+    <div class="flex flex-col items-center space-y-8 text-center">
+      <a href="/" class="font-display text-3xl font-medium text-accent hover:text-primary">
+        {store.name}
+      </a>
+
+      {footerMenu && footerMenu.links.length > 0 && (
+        <nav aria-label="Footer navigation">
+          <ul class="flex flex-col items-center justify-center gap-3 md:flex-row md:flex-wrap md:gap-6">
+            {footerMenu.links.map((link) => (
+              <li>
+                <a href={normalizeMenuUrl(link)} class="text-sm text-secondary hover:text-primary">
+                  {link.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
+      <div class="text-center text-xs text-secondary">
+        <p>&copy; {new Date().getFullYear()} {store.name}. All rights reserved.</p>
+        <a href="https://shoppego.com" target="_blank" rel="nofollow noopener" class="mt-2 inline-block hover:text-primary">
+          Powered by Shoppego
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>

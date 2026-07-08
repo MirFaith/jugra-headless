@@ -1,0 +1,68 @@
+---
+interface HeroSlide {
+  headline: string;
+  cta: string;
+  href: string;
+}
+
+interface Props {
+  slides?: HeroSlide[];
+}
+
+const {
+  slides = [
+    {
+      headline: 'Jugra heritage series',
+      cta: 'View Collection',
+      href: '/products'
+    },
+    {
+      headline: 'Crafted with care',
+      cta: 'View Collection',
+      href: '/products'
+    }
+  ]
+} = Astro.props;
+---
+
+<section class="hidden w-full md:block">
+  <div class="grid w-full grid-cols-2">
+    {slides.map((slide) => (
+      <div class="relative h-screen bg-neutral-800">
+        <div class="absolute inset-0 bg-black/40"></div>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="max-w-md px-5 text-center text-white">
+            <h1 class="mb-4 font-display text-3xl font-semibold leading-tight drop-shadow-lg lg:text-4xl">
+              {slide.headline}
+            </h1>
+            <a
+              href={slide.href}
+              class="inline-block border-2 border-white bg-transparent px-8 py-3.5 text-xs font-semibold uppercase tracking-widest text-white transition-all hover:border-primary hover:bg-primary"
+            >
+              {slide.cta}
+            </a>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+</section>
+
+<section class="relative w-full md:hidden">
+  <div class="relative h-[80vh] w-full overflow-hidden bg-neutral-800">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="max-w-3xl px-5 text-center text-white">
+        <h1 class="mb-4 font-display text-4xl font-semibold leading-tight drop-shadow-lg">
+          {slides[0]?.headline}
+        </h1>
+        <a
+          href={slides[0]?.href || '/products'}
+          class="inline-block border-2 border-white bg-transparent px-8 py-3.5 text-xs font-semibold uppercase tracking-widest text-white transition-all hover:border-primary hover:bg-primary"
+        >
+          {slides[0]?.cta || 'View Collection'}
+        </a>
+      </div>
+    </div>
+  </div>
+</section>

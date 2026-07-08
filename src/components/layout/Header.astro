@@ -1,0 +1,145 @@
+---
+import type { ShoppegoMenu, ShoppegoMenuLink, ShoppegoStore } from '@models/shoppego';
+import { normalizeMenuUrl } from '@utils/routes';
+
+interface Props {
+  store: ShoppegoStore;
+  mainMenu: ShoppegoMenu | null;
+}
+
+const { store, mainMenu } = Astro.props;
+const links = mainMenu?.links ?? [];
+
+function hasChildren(link: ShoppegoMenuLink) {
+  return link.links && link.links.length > 0;
+}
+---
+
+<nav class="relative border-b border-secondary-border/30 bg-card">
+  <div class="mx-auto max-w-6xl px-5">
+    <div class="flex items-center justify-between py-5 lg:hidden">
+      <button
+        id="mobile-menu-btn"
+        class="text-accent hover:text-primary"
+        type="button"
+        aria-label="Open menu"
+        aria-controls="mobile-menu"
+      >
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+
+      <a href="/" class="absolute left-1/2 -translate-x-1/2 font-display text-2xl font-medium text-accent hover:text-primary">
+        {store.name}
+      </a>
+
+      <div class="flex items-center gap-4">
+        <button id="search-btn-mobile" class="text-accent hover:text-primary" type="button" aria-label="Open search">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" stroke-width="1.8"></circle>
+            <path d="m21 21-4.35-4.35" stroke-width="1.8" stroke-linecap="round"></path>
+          </svg>
+        </button>
+        <button id="cart-btn-mobile" class="relative text-accent hover:text-primary" type="button" aria-label="Open cart">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+          </svg>
+          <span class="cart-count hidden absolute -right-2 -top-2 min-w-[18px] rounded-full bg-primary px-1.5 py-0.5 text-center text-xs font-semibold text-white"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hidden grid-cols-3 items-center py-5 lg:grid">
+      <div class="flex items-center gap-10">
+        <div class="flex items-center gap-10">
+          {links.map((link) => (
+            hasChildren(link) ? (
+              <div class="group relative">
+                <button
+                  type="button"
+                  class="inline-flex cursor-pointer items-center gap-1 text-xs font-medium uppercase tracking-widest text-accent hover:text-primary"
+                >
+                  {link.title}
+                  <svg class="h-3 w-3 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+                <div class="invisible absolute left-0 top-full z-50 mt-2 w-56 border border-secondary-border/30 bg-card opacity-0 shadow-lg transition-all duration-200 group-hover:visible group-hover:opacity-100">
+                  {link.links.map((child) => (
+                    <a href={normalizeMenuUrl(child)} class="block px-5 py-3 text-sm font-medium text-accent hover:bg-secondary-border/10">
+                      {child.title}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <a href={normalizeMenuUrl(link)} class="text-xs font-medium uppercase tracking-widest text-accent hover:text-primary">
+                {link.title}
+              </a>
+            )
+          ))}
+        </div>
+      </div>
+
+      <div class="flex justify-center">
+        <a href="/" class="font-display text-3xl font-medium text-accent hover:text-primary">
+          {store.name}
+        </a>
+      </div>
+
+      <div class="flex items-center justify-end gap-6">
+        <button id="search-btn" class="text-accent hover:text-primary" type="button" aria-label="Open search">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" stroke-width="1.8"></circle>
+            <path d="m21 21-4.35-4.35" stroke-width="1.8" stroke-linecap="round"></path>
+          </svg>
+        </button>
+        <button id="cart-btn" class="relative text-accent hover:text-primary" type="button" aria-label="Open cart">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+          </svg>
+          <span class="cart-count hidden absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div id="mobile-menu" class="invisible fixed inset-0 z-40 bg-primary/50 opacity-0 backdrop-blur-sm transition-all duration-300 lg:hidden">
+  <div id="mobile-menu-panel" class="fixed bottom-0 left-0 top-0 w-full -translate-x-full overflow-y-auto bg-card shadow-2xl transition-transform duration-300 ease-out">
+    <div class="flex items-center justify-between border-b border-secondary-border/30 px-5 py-5">
+      <a href="/" class="font-display text-2xl font-medium text-accent hover:text-primary">{store.name}</a>
+      <button id="mobile-menu-close" type="button" class="text-accent hover:text-primary" aria-label="Close menu">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="py-2">
+      {links.map((link) => (
+        hasChildren(link) ? (
+          <div class="border-b border-secondary-border/20">
+            <button type="button" class="mobile-menu-toggle flex w-full items-center justify-between px-5 py-4 text-left text-base font-semibold text-accent hover:bg-secondary-border/10">
+              <span>{link.title.toUpperCase()}</span>
+              <svg class="h-4 w-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div class="mobile-submenu hidden bg-secondary-border/5">
+              {link.links.map((child) => (
+                <a href={normalizeMenuUrl(child)} class="block px-8 py-3 text-sm font-medium text-accent hover:bg-secondary-border/10">
+                  {child.title}
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <a href={normalizeMenuUrl(link)} class="block border-b border-secondary-border/20 px-5 py-4 text-base font-semibold text-accent hover:bg-secondary-border/10">
+            {link.title.toUpperCase()}
+          </a>
+        )
+      ))}
+    </div>
+  </div>
+</div>

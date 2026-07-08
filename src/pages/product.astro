@@ -1,0 +1,27 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHeader from '@components/content/PageHeader.astro';
+import { StoreService } from '@services/index';
+
+const store = await StoreService.getStore();
+---
+
+<BaseLayout title={`Products | ${store.name}`} description={`Browse products from ${store.name}.`}>
+  <main>
+    <section class="min-h-[70vh] bg-card py-10 md:py-16">
+      <div class="mx-auto max-w-4xl px-5 text-center">
+        <PageHeader
+          eyebrow="Products"
+          title="Product catalog"
+          description="This menu link points to a legacy singular product path. Continue to the product catalog."
+        />
+        <a
+          href="/products"
+          class="inline-block border-2 border-primary bg-primary px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-all hover:bg-primary/90"
+        >
+          View products
+        </a>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

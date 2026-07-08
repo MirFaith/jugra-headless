@@ -1,0 +1,445 @@
+---
+import type { ShoppegoCurrency, ShoppegoProduct, ShoppegoProductOption, ShoppegoProductVariant } from '@models/shoppego';
+import { formatMoney } from '@utils/money';
+import { sanitizeHtml } from '@utils/sanitize';
+
+interface Props {
+  product: ShoppegoProduct;
+  currency: ShoppegoCurrency;
+}
+
+const { product, currency } = Astro.props;
+const images = product.images.length > 0 ? product.images : product.featured_image ? [product.featured_image] : [];
+const firstVariant = product.variants.find((variant) => variant.available) || product.variants[0];
+const selectableOptions = product.options.filter((option) => {
+  return ['radio', 'select', 'swatch'].includes(option.type) && option.name !== 'Default' && !product.has_only_default_variant;
+});
+const customOptions = product.options.filter((option) => {
+  return ['date', 'datetime', 'input', 'textarea'].includes(option.type);
+});
+const initialPrice = firstVariant?.price ?? product.price;
+const initialCompare = firstVariant?.compare_at_price ?? null;
+const productJson = JSON.stringify(product);
+const currencyJson = JSON.stringify(currency);
+
+function optionValueIsAvailable(option: ShoppegoProductOption, value: string) {
+  return product.variants.some((variant) => variant.available && variant.options[option.name] === value);
+}
+
+function optionType(type: string): 'date' | 'datetime-local' | 'text' {
+  if (type === 'date') return 'date';
+  if (type === 'datetime') return 'datetime-local';
+  return 'text';
+}
+
+function variantOptionsLabel(variant: ShoppegoProductVariant) {
+  return Object.entries(variant.options)
+    .filter(([name, value]) => name !== 'Default' && value !== 'Default')
+    .map(([name, value]) => `${name}: ${value}`)
+    .join(', ');
+}
+---
+
+<section class="bg-card py-0 md:py-16">
+  <div class="mx-auto max-w-6xl md:px-5">
+    <div class="grid grid-cols-1 gap-0 md:gap-8 lg:grid-cols-2 lg:gap-12">
+      <div class="product-images">
+        <div class="relative">
+          <div class="relative mb-0 overflow-hidden bg-secondary-border/20 md:mb-2" id="product-gallery-main">
+            {images.length > 0 ? (
+              images.map((image, index) => (
+                <div class:list={['product-gallery-slide', index !== 0 && 'hidden']}>
+                  <img
+                    src={image}
+                    alt={`${product.name} - Image ${index + 1}`}
+                    class="h-auto max-h-full w-full object-contain"
+                    loading={index === 0 ? 'eager' : 'lazy'}
+                  />
+                </div>
+              ))
+            ) : (
+              <div class="aspect-square w-full bg-secondary-border/20"></div>
+            )}
+          </div>
+
+          {images.length > 1 && (
+            <div class="flex gap-2 overflow-x-auto px-5 py-4 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:py-0">
+              {images.map((image, index) => (
+                <button
+                  type="button"
+                  class:list={[
+                    'product-gallery-thumb h-16 w-16 flex-shrink-0 overflow-hidden border-2 bg-secondary-border/20 md:h-auto md:w-auto',
+                    index === 0 ? 'border-secondary-border' : 'border-transparent'
+                  ]}
+                  data-gallery-index={index}
+                  aria-label={`View image ${index + 1}`}
+                >
+                  <img src={image} alt={`${product.name} thumbnail ${index + 1}`} class="h-full w-full object-cover md:h-auto" loading="lazy" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div class="product-info px-5 py-8 md:px-0 md:py-0">
+        <nav class="mb-4 text-sm" aria-label="Breadcrumb">
+          <ol class="flex items-center gap-2 text-secondary">
+            <li><a href="/products" class="hover:text-primary">Products</a></li>
+          </ol>
+        </nav>
+
+        <h1 class="mb-2 font-display text-3xl font-semibold md:text-4xl">
+          {product.name}
+        </h1>
+
+        <div class="mb-2 flex items-center gap-3">
+          <p
+            id="product-compare-price"
+            class:list={[
+              'text-xl font-medium text-secondary line-through',
+              !(initialCompare && initialCompare > initialPrice) && 'hidden'
+            ]}
+          >
+            {initialCompare && initialCompare > initialPrice ? formatMoney(initialCompare, currency) : ''}
+          </p>
+          <p class="text-2xl font-medium text-accent" id="product-price">
+            {formatMoney(initialPrice, currency)}
+            {product.price_varies && <sup>+</sup>}
+          </p>
+        </div>
+
+        <form id="product-form" data-product={productJson} data-currency={currencyJson}>
+          <input type="hidden" id="selected-variant-id" name="variant_id" value={selectableOptions.length > 0 ? '' : firstVariant?.id ?? ''} />
+          <div id="product-alert" class="mb-4 hidden rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            Please select an option.
+          </div>
+
+          {selectableOptions.length > 0 && (
+            <div id="product-options" class="mb-6">
+              {selectableOptions.map((option) => (
+                <div class="mb-4" data-option-group={option.name}>
+                  <label class="mb-2 block text-sm font-medium">{option.name}</label>
+                  <div class:list={[option.type === 'swatch' ? 'flex flex-wrap gap-3' : 'grid grid-cols-2 gap-3']}>
+                    {option.values.map((value) => {
+                      const available = optionValueIsAvailable(option, value.name);
+                      const colors = value.metadata?.colors || ['#E2E0DC'];
+
+                      return option.type === 'swatch' ? (
+                        <button
+                          type="button"
+                          class:list={[
+                            'product-option-button relative h-10 w-10 overflow-hidden border border-secondary-border transition-all hover:border-primary',
+                            !available && 'cursor-not-allowed opacity-30'
+                          ]}
+                          data-option-name={option.name}
+                          data-option-value={value.name}
+                          data-sold-out={!available}
+                          aria-label={value.name}
+                          title={value.name}
+                        >
+                          <span class="flex h-full w-full flex-col">
+                            <span class="block min-h-0 flex-1" style={`background: ${colors[0]};`}></span>
+                            <span class="block min-h-0 flex-1" style={`background: ${colors[1] || colors[0]};`}></span>
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          class:list={[
+                            'product-option-button relative flex w-full items-center justify-center overflow-hidden border border-secondary-border px-4 py-3 text-sm font-medium text-accent transition-all hover:border-primary',
+                            !available && 'cursor-not-allowed opacity-30'
+                          ]}
+                          data-option-name={option.name}
+                          data-option-value={value.name}
+                          data-sold-out={!available}
+                        >
+                          <span>{value.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {customOptions.length > 0 && (
+            <div class="mb-6">
+              {customOptions.map((option) => (
+                <div class="mb-4">
+                  <label class="mb-2 block text-sm font-medium" for={`custom-option-${option.id}`}>
+                    {option.name}
+                  </label>
+                  {option.type === 'textarea' ? (
+                    <textarea
+                      id={`custom-option-${option.id}`}
+                      name={`options[${option.id}]`}
+                      class="w-full border border-secondary-border bg-card px-3 py-3 text-sm focus:border-primary focus:outline-none"
+                      maxlength="255"
+                      rows="4"
+                      required={option.required}
+                    ></textarea>
+                  ) : (
+                    <input
+                      id={`custom-option-${option.id}`}
+                      type={optionType(option.type)}
+                      name={`options[${option.id}]`}
+                      class="w-full border border-secondary-border bg-card px-3 py-3 text-sm focus:border-primary focus:outline-none"
+                      required={option.required}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {product.variants.length > 1 && product.has_only_default_variant && (
+            <div class="mb-4 text-sm text-secondary">
+              {product.variants.map((variant) => (
+                <p>{variantOptionsLabel(variant)}</p>
+              ))}
+            </div>
+          )}
+
+          <div class="mb-6">
+            <label class="mb-2 block text-sm font-medium" for="product-quantity">Quantity</label>
+            <div class="flex items-center gap-4">
+              <div class:list={['flex items-stretch border border-secondary-border', !product.available && 'opacity-50']}>
+                <button id="quantity-minus" class="flex items-center justify-center px-4 transition-colors hover:bg-secondary-border/10" type="button" disabled={!product.available}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+                <input
+                  id="product-quantity"
+                  class="w-16 border-x border-secondary-border/50 py-3 text-center focus:outline-none"
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  value="1"
+                  disabled={!product.available}
+                />
+                <button id="quantity-plus" class="flex items-center justify-center px-4 transition-colors hover:bg-secondary-border/10" type="button" disabled={!product.available}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            {product.available ? (
+              <>
+                <button
+                  type="button"
+                  id="btn-add-to-cart"
+                  class="w-full border-2 border-primary bg-transparent px-8 py-4 text-sm font-semibold uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-white"
+                >
+                  Add to cart
+                </button>
+                <button
+                  type="button"
+                  id="btn-buynow"
+                  class="flex w-full items-center justify-center gap-2 border-2 border-primary bg-primary px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-all hover:bg-primary/90"
+                >
+                  Buy now
+                </button>
+              </>
+            ) : (
+              <button class="w-full cursor-not-allowed border-2 border-secondary-border bg-secondary-border px-8 py-4 text-sm font-semibold uppercase tracking-widest text-secondary" disabled>
+                Sold Out
+              </button>
+            )}
+          </div>
+        </form>
+
+        {product.description && (
+          <div class="prose-jugra mt-8 text-secondary" set:html={sanitizeHtml(product.description)} />
+        )}
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { CheckoutService } from '@services/CheckoutService';
+  import { cartStore } from '@stores/cartStore';
+  import type { ShoppegoProduct, ShoppegoProductVariant } from '@models/shoppego';
+
+  function formatMoney(amount: number, currency: { symbol?: string; decimal_digits?: number; thousand_separator?: string }) {
+    const decimals = Number.isInteger(currency.decimal_digits) ? (currency.decimal_digits as number) : 2;
+    const fixed = Number(amount || 0).toFixed(decimals);
+    const [whole, fraction] = fixed.split('.');
+    const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, currency.thousand_separator || ',');
+    return `${currency.symbol || ''}${grouped}${decimals > 0 ? `.${fraction}` : ''}`;
+  }
+
+  const form = document.getElementById('product-form') as HTMLFormElement | null;
+
+  if (form) {
+    const product = JSON.parse(form.dataset.product || '{}') as ShoppegoProduct;
+    const currency = JSON.parse(form.dataset.currency || '{}');
+    const selectedVariantInput = document.getElementById('selected-variant-id') as HTMLInputElement | null;
+    const priceEl = document.getElementById('product-price');
+    const compareEl = document.getElementById('product-compare-price');
+    const alertEl = document.getElementById('product-alert');
+    const quantityInput = document.getElementById('product-quantity') as HTMLInputElement | null;
+    const optionButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.product-option-button'));
+    const addButton = document.getElementById('btn-add-to-cart') as HTMLButtonElement | null;
+    const buyButton = document.getElementById('btn-buynow') as HTMLButtonElement | null;
+    const selections: Record<string, string> = {};
+
+    function findVariant(): ShoppegoProductVariant | null {
+      const selectableOptions = (product.options || []).filter((option) => {
+        return ['radio', 'select', 'swatch'].includes(option.type) && option.name !== 'Default' && !product.has_only_default_variant;
+      });
+
+      if (selectableOptions.length && Object.keys(selections).length !== selectableOptions.length) {
+        return null;
+      }
+
+      return (product.variants || []).find((variant) => {
+        return Object.entries(selections).every(([name, value]) => variant.options?.[name] === value);
+      }) || product.variants?.[0] || null;
+    }
+
+    function syncVariant() {
+      const variant = findVariant();
+      if (!variant) return;
+
+      if (selectedVariantInput) selectedVariantInput.value = String(variant.id);
+      if (priceEl) priceEl.textContent = formatMoney(variant.price, currency);
+      if (compareEl) {
+        const hasCompare = variant.compare_at_price && variant.compare_at_price > variant.price;
+        compareEl.textContent = hasCompare ? formatMoney(variant.compare_at_price as number, currency) : '';
+        compareEl.classList.toggle('hidden', !hasCompare);
+      }
+      document.querySelectorAll<HTMLButtonElement>('#btn-add-to-cart, #btn-buynow').forEach((button) => {
+        button.disabled = !variant.available;
+        button.classList.toggle('opacity-50', !variant.available);
+        button.classList.toggle('cursor-not-allowed', !variant.available);
+      });
+    }
+
+    optionButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.dataset.soldOut === 'true') return;
+
+        const name = button.dataset.optionName;
+        const value = button.dataset.optionValue;
+        if (!name || !value) return;
+
+        selections[name] = value;
+        button.closest('[data-option-group]')?.querySelectorAll('.product-option-button').forEach((sibling) => {
+          sibling.classList.remove('border-primary');
+          sibling.classList.add('border-secondary-border');
+        });
+        button.classList.add('border-primary');
+        button.classList.remove('border-secondary-border');
+        alertEl?.classList.add('hidden');
+        syncVariant();
+      });
+    });
+
+    document.getElementById('quantity-minus')?.addEventListener('click', () => {
+      if (!quantityInput) return;
+      quantityInput.value = String(Math.max(1, Number(quantityInput.value || 1) - 1));
+    });
+
+    document.getElementById('quantity-plus')?.addEventListener('click', () => {
+      if (!quantityInput) return;
+      quantityInput.value = String(Math.max(1, Number(quantityInput.value || 1) + 1));
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('.product-gallery-thumb').forEach((thumb) => {
+      thumb.addEventListener('click', () => {
+        const index = thumb.dataset.galleryIndex;
+        document.querySelectorAll('.product-gallery-slide').forEach((slide, slideIndex) => {
+          slide.classList.toggle('hidden', String(slideIndex) !== index);
+        });
+        document.querySelectorAll('.product-gallery-thumb').forEach((other) => {
+          other.classList.remove('border-secondary-border');
+          other.classList.add('border-transparent');
+        });
+        thumb.classList.add('border-secondary-border');
+        thumb.classList.remove('border-transparent');
+      });
+    });
+
+    function getSelectedVariant(): ShoppegoProductVariant | null {
+      const variant = findVariant();
+
+      if (!variant || !selectedVariantInput?.value) {
+        alertEl?.classList.remove('hidden');
+        return null;
+      }
+
+      if (!variant.available) {
+        alertEl?.classList.remove('hidden');
+        if (alertEl) alertEl.textContent = 'This option is currently unavailable.';
+        return null;
+      }
+
+      if (!form?.reportValidity()) return null;
+      alertEl?.classList.add('hidden');
+      return variant;
+    }
+
+    function getQuantity(): number {
+      return Math.max(1, Number(quantityInput?.value || 1));
+    }
+
+    addButton?.addEventListener('click', () => {
+      const variant = getSelectedVariant();
+      if (!variant) return;
+
+      cartStore.add({
+        product,
+        variant,
+        quantity: getQuantity()
+      });
+      window.dispatchEvent(new CustomEvent('jugra:open-cart'));
+
+      if (addButton) {
+        addButton.textContent = 'Added';
+        window.setTimeout(() => {
+          addButton.textContent = 'Add to cart';
+        }, 1200);
+      }
+    });
+
+    buyButton?.addEventListener('click', async () => {
+      const variant = getSelectedVariant();
+      if (!variant || !buyButton) return;
+
+      buyButton.disabled = true;
+      buyButton.textContent = 'Opening checkout...';
+
+      try {
+        const checkout = await CheckoutService.createCheckout({
+          lines: [{ variant_id: variant.id, quantity: getQuantity() }]
+        });
+        window.location.href = checkout.checkout_url;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Checkout could not be created.';
+        if (alertEl) {
+          alertEl.textContent = message;
+          alertEl.classList.remove('hidden');
+        }
+        buyButton.disabled = false;
+        buyButton.textContent = 'Buy now';
+      }
+    });
+
+    document.querySelectorAll<HTMLButtonElement>('#btn-add-to-cart, #btn-buynow').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (!selectedVariantInput?.value) {
+          alertEl?.classList.remove('hidden');
+        }
+      });
+    });
+  }
+</script>

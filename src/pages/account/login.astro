@@ -1,0 +1,28 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHeader from '@components/content/PageHeader.astro';
+import { StoreService } from '@services/index';
+
+const store = await StoreService.getStore();
+const hostedLoginUrl = `${store.online_store_url.replace(/\/+$/, '')}/account/login`;
+---
+
+<BaseLayout title={`Account login | ${store.name}`} description={`Customer account access for ${store.name}.`}>
+  <main>
+    <section class="min-h-[70vh] bg-card py-10 md:py-16">
+      <div class="mx-auto max-w-4xl px-5 text-center">
+        <PageHeader
+          eyebrow="Account"
+          title="Customer login"
+          description="The documented Headless Storefront API does not expose customer login sessions yet. Use the hosted store account page for customer account access."
+        />
+        <a
+          href={hostedLoginUrl}
+          class="inline-block border-2 border-primary bg-primary px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-all hover:bg-primary/90"
+        >
+          Open hosted login
+        </a>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

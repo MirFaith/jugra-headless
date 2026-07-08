@@ -1,0 +1,57 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHeader from '@components/content/PageHeader.astro';
+import ProductGrid from '@components/product/ProductGrid.astro';
+import SearchState from '@components/product/SearchState.astro';
+import { SearchService, StoreService } from '@services/index';
+
+const url = new URL(Astro.request.url);
+const query = (url.searchParams.get('q') || '').trim();
+const [store, products] = await Promise.all([
+  StoreService.getStore(),
+  query ? SearchService.searchAllProducts(query) : Promise.resolve([])
+]);
+---
+
+<BaseLayout title={`Search | ${store.name}`} description={`Search products from ${store.name}.`}>
+  <main>
+    <section class="min-h-[80vh] bg-card py-10 md:py-16">
+      <div class="mx-auto max-w-6xl px-5">
+        <PageHeader
+          eyebrow="Search"
+          title="Find your next piece"
+          description="Search the live product catalog powered by the Shoppego Headless Storefront API."
+        />
+
+        <form action="/search" method="get" class="mx-auto mb-10 flex max-w-2xl items-center gap-3">
+          <label class="sr-only" for="search-page-input">Search products</label>
+          <input
+            id="search-page-input"
+            type="search"
+            name="q"
+            value={query}
+            placeholder="Search products..."
+            class="min-w-0 flex-1 border-2 border-secondary-border/40 bg-card px-5 py-3 text-base focus:border-primary focus:outline-none"
+          />
+          <button
+            type="submit"
+            class="border-2 border-primary bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-widest text-white transition-all hover:bg-primary/90"
+          >
+            Search
+          </button>
+        </form>
+
+        {query ? (
+          <>
+            <SearchState query={query} count={products.length} />
+            {products.length > 0 && <ProductGrid products={products} currency={store.currency} />}
+          </>
+        ) : (
+          <div class="py-12 text-center">
+            <p class="text-secondary">Enter a keyword to search products.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  </main>
+</BaseLayout>

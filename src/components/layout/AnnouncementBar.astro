@@ -1,0 +1,30 @@
+---
+interface Props {
+  messages?: Array<{
+    text: string;
+    href?: string;
+  }>;
+}
+
+const { messages = [] } = Astro.props;
+---
+
+{messages.length > 0 && (
+  <div class="relative overflow-hidden bg-primary" data-announcement-bar>
+    <div class="announcement-slider">
+      {messages.map((message, index) => (
+        <div class:list={['announcement-slide', index === 0 && 'active']}>
+          <div class="flex items-center justify-center px-5 py-3">
+            {message.href ? (
+              <a href={message.href} class="text-center text-sm text-white hover:underline">
+                {message.text}
+              </a>
+            ) : (
+              <p class="text-center text-sm text-white">{message.text}</p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}

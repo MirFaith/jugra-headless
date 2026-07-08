@@ -1,0 +1,28 @@
+---
+import type { ShoppegoCurrency, ShoppegoProduct } from '@models/shoppego';
+import ProductCard from './ProductCard.astro';
+
+interface Props {
+  products: ShoppegoProduct[];
+  currency: ShoppegoCurrency;
+  emptyMessage?: string;
+}
+
+const {
+  products,
+  currency,
+  emptyMessage = 'No products available at the moment. Check back soon!'
+} = Astro.props;
+---
+
+{products.length > 0 ? (
+  <div class="mb-12 grid grid-cols-2 gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+    {products.map((product) => (
+      <ProductCard product={product} currency={currency} />
+    ))}
+  </div>
+) : (
+  <div class="py-12 text-center">
+    <p class="text-secondary">{emptyMessage}</p>
+  </div>
+)}

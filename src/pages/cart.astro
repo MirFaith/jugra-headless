@@ -1,0 +1,34 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHeader from '@components/content/PageHeader.astro';
+import { StoreService } from '@services/index';
+
+const store = await StoreService.getStore();
+---
+
+<BaseLayout title={`Cart | ${store.name}`} description={`Review your cart at ${store.name}.`}>
+  <main>
+    <section class="min-h-[70vh] bg-card py-10 md:py-16">
+      <div class="mx-auto max-w-4xl px-5 text-center">
+        <PageHeader
+          eyebrow="Cart"
+          title="Shopping cart"
+          description="Your cart is saved in this browser. Open the cart drawer to review items, change quantities, or start checkout."
+        />
+        <button
+          id="open-cart-page-button"
+          type="button"
+          class="border-2 border-primary bg-primary px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-all hover:bg-primary/90"
+        >
+          Open cart
+        </button>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  document.getElementById('open-cart-page-button')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('jugra:open-cart'));
+  });
+</script>

@@ -1,0 +1,321 @@
+---
+import type { ShoppegoMenu, ShoppegoStore } from '@models/shoppego';
+import AnnouncementBar from './AnnouncementBar.astro';
+import CartDrawer from '@components/cart/CartDrawer.astro';
+import Footer from './Footer.astro';
+import Header from './Header.astro';
+import SearchModal from './SearchModal.astro';
+
+interface Props {
+  store: ShoppegoStore;
+  mainMenu: ShoppegoMenu | null;
+  footerMenu: ShoppegoMenu | null;
+}
+
+const { store, mainMenu, footerMenu } = Astro.props;
+const announcements = [
+  { text: 'Free shipping and secure checkout powered by Shoppego.' }
+];
+---
+
+<AnnouncementBar messages={announcements} />
+<Header store={store} mainMenu={mainMenu} />
+<SearchModal />
+<CartDrawer currency={store.currency} />
+<slot />
+<Footer store={store} footerMenu={footerMenu} />
+
+<script>
+  import { CheckoutService } from '@services/CheckoutService';
+  import { CartService } from '@services/CartService';
+  import { cartStore } from '@stores/cartStore';
+  import type { CartLine, CartState } from '@models/cart';
+  import type { ShoppegoCurrency } from '@models/shoppego';
+
+  function setVisibility(element: HTMLElement | null, visible: boolean) {
+    if (!element) return;
+    element.classList.toggle('invisible', !visible);
+    element.classList.toggle('opacity-0', !visible);
+    element.classList.toggle('opacity-100', visible);
+  }
+
+  function bindDrawer(
+    openButtonIds: string[],
+    drawerId: string,
+    panelId: string,
+    closeButtonId: string,
+    openClass: string,
+    closedClass: string
+  ) {
+    const drawer = document.getElementById(drawerId);
+    const panel = document.getElementById(panelId);
+    const closeButton = document.getElementById(closeButtonId);
+
+    function open() {
+      setVisibility(drawer, true);
+      window.setTimeout(() => {
+        panel?.classList.remove(closedClass);
+        panel?.classList.add(openClass);
+      }, 10);
+      document.body.style.overflow = 'hidden';
+    }
+
+    function close() {
+      panel?.classList.remove(openClass);
+      panel?.classList.add(closedClass);
+      window.setTimeout(() => setVisibility(drawer, false), 300);
+      document.body.style.overflow = '';
+    }
+
+    openButtonIds.forEach((id) => document.getElementById(id)?.addEventListener('click', open));
+    closeButton?.addEventListener('click', close);
+    drawer?.addEventListener('click', (event) => {
+      if (event.target === drawer) close();
+    });
+
+    return { open, close };
+  }
+
+  bindDrawer(['mobile-menu-btn'], 'mobile-menu', 'mobile-menu-panel', 'mobile-menu-close', 'translate-x-0', '-translate-x-full');
+  const cartDrawer = bindDrawer(['cart-btn', 'cart-btn-mobile'], 'cart-drawer', 'cart-drawer-panel', 'cart-drawer-close', 'translate-x-0', 'translate-x-full');
+  bindDrawer(['search-btn', 'search-btn-mobile'], 'search-modal', 'search-modal-panel', 'search-modal-close', 'translate-y-0', '-translate-y-full');
+
+  document.getElementById('continue-shopping')?.addEventListener('click', () => {
+    document.getElementById('cart-drawer-close')?.click();
+  });
+
+  window.addEventListener('jugra:open-cart', () => {
+    cartDrawer.open();
+  });
+
+  document.querySelectorAll('.mobile-menu-toggle').forEach((toggle) => {
+    toggle.addEventListener('click', () => {
+      const submenu = toggle.nextElementSibling;
+      const arrow = toggle.querySelector('svg');
+      submenu?.classList.toggle('hidden');
+      arrow?.classList.toggle('rotate-180');
+    });
+  });
+
+  const slides = document.querySelectorAll('.announcement-slide');
+  let currentSlide = 0;
+
+  if (slides.length > 1) {
+    window.setInterval(() => {
+      slides[currentSlide]?.classList.remove('active');
+      currentSlide = (currentSlide + 1) % slides.length;
+      slides[currentSlide]?.classList.add('active');
+    }, 4000);
+  }
+
+  const cartRoot = document.getElementById('cart-drawer');
+  const cartContent = document.getElementById('cart-drawer-content');
+  const cartStatus = document.getElementById('cart-drawer-status');
+  const currency = JSON.parse(cartRoot?.dataset.currency || '{}') as ShoppegoCurrency;
+
+  function escapeHtml(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function formatMoney(amount: number): string {
+    const decimals = Number.isInteger(currency.decimal_digits) ? currency.decimal_digits : 2;
+    const fixed = Number(amount || 0).toFixed(decimals);
+    const [whole, fraction] = fixed.split('.');
+    const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, currency.thousand_separator || ',');
+    return `${currency.symbol || ''}${grouped}${decimals > 0 ? `.${fraction}` : ''}`;
+  }
+
+  function setCartStatus(message = '', tone: 'error' | 'success' | 'neutral' = 'neutral') {
+    if (!cartStatus) return;
+
+    cartStatus.textContent = message;
+    cartStatus.classList.toggle('hidden', !message);
+    cartStatus.classList.toggle('bg-red-50', tone === 'error');
+    cartStatus.classList.toggle('text-red-700', tone === 'error');
+    cartStatus.classList.toggle('bg-green-50', tone === 'success');
+    cartStatus.classList.toggle('text-green-700', tone === 'success');
+    cartStatus.classList.toggle('bg-secondary-border/10', tone === 'neutral');
+    cartStatus.classList.toggle('text-secondary', tone === 'neutral');
+  }
+
+  function lineOptionSummary(line: CartLine): string {
+    return line.options
+      .filter((option) => option.name !== 'Default' && option.value !== 'Default')
+      .map((option) => `${escapeHtml(option.name)}: ${escapeHtml(option.value)}`)
+      .join(' / ');
+  }
+
+  function lineImage(line: CartLine): string {
+    if (!line.image) {
+      return '<div class="h-20 w-16 flex-shrink-0 bg-secondary-border/20"></div>';
+    }
+
+    return `
+      <a href="/products/${encodeURIComponent(line.productSlug)}" class="h-20 w-16 flex-shrink-0 overflow-hidden bg-secondary-border/20">
+        <img src="${escapeHtml(line.image)}" alt="${escapeHtml(line.productName)}" class="h-full w-full object-cover" loading="lazy" />
+      </a>
+    `;
+  }
+
+  function renderLine(line: CartLine): string {
+    const options = lineOptionSummary(line);
+
+    return `
+      <li class="flex gap-4 border-b border-secondary-border/40 py-5" data-cart-line="${line.variantId}">
+        ${lineImage(line)}
+        <div class="min-w-0 flex-1">
+          <div class="mb-2 flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <a href="/products/${encodeURIComponent(line.productSlug)}" class="block truncate text-sm font-semibold text-accent hover:text-primary">
+                ${escapeHtml(line.productName)}
+              </a>
+              ${options ? `<p class="mt-1 text-xs text-secondary">${options}</p>` : ''}
+            </div>
+            <button type="button" class="cart-remove text-secondary hover:text-primary" data-variant-id="${line.variantId}" aria-label="Remove ${escapeHtml(line.productName)}">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex items-stretch border border-secondary-border">
+              <button type="button" class="cart-qty-minus px-3 py-2 text-sm hover:bg-secondary-border/10" data-variant-id="${line.variantId}" aria-label="Decrease quantity">-</button>
+              <input class="cart-qty-input w-12 border-x border-secondary-border/50 text-center text-sm focus:outline-none" data-variant-id="${line.variantId}" value="${line.quantity}" min="1" type="number" />
+              <button type="button" class="cart-qty-plus px-3 py-2 text-sm hover:bg-secondary-border/10" data-variant-id="${line.variantId}" aria-label="Increase quantity">+</button>
+            </div>
+            <p class="text-sm font-semibold text-accent">${formatMoney(line.price * line.quantity)}</p>
+          </div>
+        </div>
+      </li>
+    `;
+  }
+
+  function emptyCartHtml(): string {
+    return `
+      <div class="flex flex-1 flex-col items-center justify-center px-5 py-10">
+        <p class="mb-2 text-lg font-medium text-accent">Your cart is empty</p>
+        <p class="mb-6 text-center text-sm text-secondary">Add some products to get started</p>
+        <button
+          id="continue-shopping"
+          type="button"
+          class="inline-block border-2 border-primary px-8 py-3.5 text-xs font-semibold uppercase tracking-widest text-primary hover:bg-primary hover:text-white"
+        >
+          Continue Shopping
+        </button>
+      </div>
+    `;
+  }
+
+  function cartHtml(cart: CartState): string {
+    const subtotal = CartService.getSubtotal(cart);
+
+    return `
+      <div class="flex min-h-0 flex-1 flex-col">
+        <ul class="flex-1 overflow-y-auto px-5">
+          ${cart.lines.map(renderLine).join('')}
+        </ul>
+        <div class="border-t border-secondary-border/50 px-5 py-5">
+          <div class="mb-4 flex items-center justify-between text-base font-semibold text-accent">
+            <span>Subtotal</span>
+            <span>${formatMoney(subtotal)}</span>
+          </div>
+          <p class="mb-4 text-xs leading-relaxed text-secondary">
+            Taxes, shipping, discounts, and payment are calculated in the secure Shoppego checkout.
+          </p>
+          <button
+            id="cart-checkout"
+            type="button"
+            class="w-full border-2 border-primary bg-primary px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Checkout
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function updateCartCount(cart: CartState) {
+    const count = CartService.getItemCount(cart);
+    document.querySelectorAll<HTMLElement>('.cart-count').forEach((counter) => {
+      counter.textContent = count > 99 ? '99+' : String(count);
+      counter.classList.toggle('hidden', count === 0);
+    });
+  }
+
+  function renderCart(cart = cartStore.read()) {
+    if (!cartContent) return;
+
+    updateCartCount(cart);
+    cartContent.innerHTML = cart.lines.length ? cartHtml(cart) : emptyCartHtml();
+
+    document.getElementById('continue-shopping')?.addEventListener('click', () => {
+      cartDrawer.close();
+    });
+  }
+
+  cartContent?.addEventListener('click', async (event) => {
+    const target = event.target as HTMLElement | null;
+    const button = target?.closest('button') as HTMLButtonElement | null;
+    if (!button) return;
+
+    const variantId = Number(button.dataset.variantId);
+
+    if (button.classList.contains('cart-qty-minus') || button.classList.contains('cart-qty-plus')) {
+      const cart = cartStore.read();
+      const line = cart.lines.find((item) => item.variantId === variantId);
+      if (!line) return;
+
+      const nextQuantity = button.classList.contains('cart-qty-plus') ? line.quantity + 1 : line.quantity - 1;
+      cartStore.updateQuantity(variantId, nextQuantity);
+      setCartStatus();
+      return;
+    }
+
+    if (button.classList.contains('cart-remove')) {
+      cartStore.remove(variantId);
+      setCartStatus();
+      return;
+    }
+
+    if (button.id === 'cart-checkout') {
+      const cart = cartStore.read();
+      if (!cart.lines.length) return;
+
+      button.disabled = true;
+      button.textContent = 'Opening checkout...';
+      setCartStatus('Checking item availability...', 'neutral');
+
+      try {
+        const checkout = await CheckoutService.createCheckout(CartService.toCheckoutInput(cart));
+        window.location.href = checkout.checkout_url;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Checkout could not be created.';
+        setCartStatus(message, 'error');
+        button.disabled = false;
+        button.textContent = 'Checkout';
+      }
+    }
+  });
+
+  cartContent?.addEventListener('change', (event) => {
+    const input = event.target as HTMLInputElement | null;
+    if (!input?.classList.contains('cart-qty-input')) return;
+
+    const variantId = Number(input.dataset.variantId);
+    const quantity = Math.max(1, Number(input.value || 1));
+    cartStore.updateQuantity(variantId, quantity);
+    setCartStatus();
+  });
+
+  window.addEventListener('jugra:cart-updated', (event) => {
+    const cart = (event as CustomEvent<CartState>).detail;
+    renderCart(cart);
+  });
+
+  renderCart();
+</script>

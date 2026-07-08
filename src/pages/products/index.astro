@@ -1,0 +1,45 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import CategoryFilter from '@components/product/CategoryFilter.astro';
+import Pagination from '@components/product/Pagination.astro';
+import ProductGrid from '@components/product/ProductGrid.astro';
+import SearchState from '@components/product/SearchState.astro';
+import { CollectionService, ProductService, SearchService, StoreService } from '@services/index';
+
+const url = new URL(Astro.request.url);
+const page = Math.max(1, Number(url.searchParams.get('page') || '1'));
+const query = (url.searchParams.get('q') || '').trim();
+
+const [store, collections, productEnvelope] = await Promise.all([
+  StoreService.getStore(),
+  CollectionService.list(),
+  query ? SearchService.searchProducts(query, page) : ProductService.list(page)
+]);
+const products = productEnvelope.data;
+---
+
+<BaseLayout title={`Products | ${store.name}`} description={`Browse products from ${store.name}.`}>
+  <main>
+    <section class="min-h-[80vh] bg-card py-10 md:py-16">
+      <div class="mx-auto max-w-6xl px-5">
+        {!(query && products.length === 0) && (
+          <div>
+            <h1 class="mb-8 text-center font-display text-3xl font-semibold md:text-4xl">
+              Products
+            </h1>
+            <CategoryFilter collections={collections} />
+            <SearchState query={query} count={products.length} />
+            <ProductGrid products={products} currency={store.currency} />
+            {!query && (
+              <Pagination meta={productEnvelope.meta} basePath="/products" />
+            )}
+          </div>
+        )}
+
+        {query && products.length === 0 && (
+          <SearchState query={query} count={products.length} />
+        )}
+      </div>
+    </section>
+  </main>
+</BaseLayout>

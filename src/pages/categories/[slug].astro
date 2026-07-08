@@ -1,0 +1,60 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import ProductGrid from '@components/product/ProductGrid.astro';
+import { CollectionService, StoreService } from '@services/index';
+
+export async function getStaticPaths() {
+  const collections = await CollectionService.list();
+
+  return collections.map((collection) => ({
+    params: { slug: collection.slug }
+  }));
+}
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  throw new Error('Missing collection slug.');
+}
+
+const [store, collections, collection] = await Promise.all([
+  StoreService.getStore(),
+  CollectionService.list(),
+  CollectionService.getBySlug(slug)
+]);
+---
+
+<BaseLayout title={`${collection.name} | ${store.name}`} description={`Shop ${collection.name} products from ${store.name}.`}>
+  <main>
+    <section class="min-h-[80vh] bg-card py-10 md:py-16">
+      <div class="mx-auto max-w-6xl px-5">
+        <h1 class="mb-8 text-center font-display text-3xl font-semibold md:text-4xl">
+          {collection.name}
+        </h1>
+
+        <div class="mb-12 flex flex-wrap justify-center gap-6">
+          <a href="/products" class="text-base font-medium text-accent hover:text-primary">
+            All
+          </a>
+          {collections.map((item) => (
+            <a
+              href={`/categories/${item.slug}`}
+              class:list={[
+                'text-base font-medium text-accent hover:text-primary',
+                item.slug === collection.slug && 'underline'
+              ]}
+            >
+              {item.name}
+            </a>
+          ))}
+        </div>
+
+        <ProductGrid
+          products={collection.products}
+          currency={store.currency}
+          emptyMessage="No products available in this collection at the moment."
+        />
+      </div>
+    </section>
+  </main>
+</BaseLayout>
