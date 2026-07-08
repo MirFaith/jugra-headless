@@ -8,5 +8,8 @@ export default defineConfig({
     })
   ],
   output: 'static',
+  build: {
+    inlineStylesheets: 'always'
+  },
   site: process.env.PUBLIC_SITE_URL || 'https://example.com'
 });
