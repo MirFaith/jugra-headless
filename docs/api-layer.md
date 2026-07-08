@@ -15,7 +15,7 @@ Astro page/component
 Required public environment variables:
 
 ```env
-PUBLIC_SHOPPEGO_API_BASE_URL=https://amirulamri.shoppegram.dev/api/v1
+PUBLIC_SHOPPEGO_API_BASE_URL=https://your-store.shoppegram.dev/api/v1
 PUBLIC_SHOPPEGO_STOREFRONT_TOKEN=...
 PUBLIC_SITE_URL=https://your-site.netlify.app
 ```

@@ -4,6 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  SECRETS_SCAN_OMIT_KEYS = "PUBLIC_SHOPPEGO_API_BASE_URL,PUBLIC_SHOPPEGO_STOREFRONT_TOKEN"
 
 [[redirects]]
   from = "/*"

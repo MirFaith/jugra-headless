@@ -31,7 +31,7 @@ The cart itself is stateless. The browser stores cart lines locally, then sends 
 Create a local `.env` file using `.env.example` as the template:
 
 ```env
-PUBLIC_SHOPPEGO_API_BASE_URL=https://amirulamri.shoppegram.dev/api/v1
+PUBLIC_SHOPPEGO_API_BASE_URL=https://your-store.shoppegram.dev/api/v1
 PUBLIC_SHOPPEGO_STOREFRONT_TOKEN=replace_with_publishable_storefront_token
 PUBLIC_SITE_URL=http://localhost:4321
 ```
@@ -116,9 +116,11 @@ Use these Netlify settings:
 Add these environment variables in Netlify:
 
 ```env
-PUBLIC_SHOPPEGO_API_BASE_URL=https://amirulamri.shoppegram.dev/api/v1
+PUBLIC_SHOPPEGO_API_BASE_URL=https://your-store.shoppegram.dev/api/v1
 PUBLIC_SHOPPEGO_STOREFRONT_TOKEN=your_publishable_storefront_token
 PUBLIC_SITE_URL=https://your-site.netlify.app
 ```
+
+`netlify.toml` omits `PUBLIC_SHOPPEGO_API_BASE_URL` and `PUBLIC_SHOPPEGO_STOREFRONT_TOKEN` from Netlify secrets scanning because those public storefront values are bundled into browser checkout code by design. Keep private admin/API tokens out of this project.
 
 More deployment details are in `docs/release.md`.

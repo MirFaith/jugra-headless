@@ -28,12 +28,14 @@ Node version: 20
 Configure environment variables:
 
 ```env
-PUBLIC_SHOPPEGO_API_BASE_URL=https://amirulamri.shoppegram.dev/api/v1
+PUBLIC_SHOPPEGO_API_BASE_URL=https://your-store.shoppegram.dev/api/v1
 PUBLIC_SHOPPEGO_STOREFRONT_TOKEN=your_publishable_storefront_token
 PUBLIC_SITE_URL=https://your-site.netlify.app
 ```
 
 The storefront token is publishable for browser storefront use, but it should still live in deployment settings instead of being hardcoded into source files.
+
+`netlify.toml` sets `SECRETS_SCAN_OMIT_KEYS` for `PUBLIC_SHOPPEGO_API_BASE_URL` and `PUBLIC_SHOPPEGO_STOREFRONT_TOKEN`. These values are intentionally public storefront runtime settings and can appear in browser assets. Do not add private admin tokens to those public variables.
 
 ## Build Output
 
