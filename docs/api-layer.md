@@ -37,7 +37,7 @@ The storefront token is publishable according to the Headless API docs, but it s
 
 - `StoreService`: store name, currency, online store URL
 - `ProductService`: product listing, product detail, first available variant
-- `CollectionService`: collection listing and collection detail
+- `CollectionService`: collection listing, collection detail, and hosted-category membership fallback
 - `MenuService`: navigation menus
 - `SearchService`: product search over catalog response until a dedicated API endpoint exists
 - `CartService`: pure cart state calculations
@@ -56,6 +56,12 @@ The Headless Storefront API is stateless for carts. The browser owns cart state,
 ```
 
 Shoppego recomputes prices server-side and returns a `checkout_url`.
+
+## Collection Fallback
+
+The documented collection detail endpoint can return an empty product list while the hosted Shoppego category page already shows products. When that happens, `CollectionService` uses the hosted category URL from the API response to read product slugs from `/products/{slug}` links, then hydrates those products through the official product detail endpoint.
+
+This fallback is only for category membership compatibility. Product data and checkout still come from the Headless Storefront API.
 
 ## Search
 
