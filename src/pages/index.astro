@@ -238,10 +238,29 @@ const currencyJson = JSON.stringify(store.currency);
       }
     }
 
-    if ('requestIdleCallback' in window) {
-      window.requestIdleCallback(loadHomepageCatalog, { timeout: 1200 });
+    let homepageCatalogStarted = false;
+
+    function loadHomepageCatalogOnce() {
+      if (homepageCatalogStarted) return;
+      homepageCatalogStarted = true;
+      void loadHomepageCatalog();
+    }
+
+    function scheduleHomepageCatalog() {
+      globalThis.setTimeout(loadHomepageCatalogOnce, 2500);
+    }
+
+    ['scroll', 'touchstart', 'pointerdown', 'keydown'].forEach((eventName) => {
+      window.addEventListener(eventName, loadHomepageCatalogOnce, {
+        once: true,
+        passive: true
+      });
+    });
+
+    if (document.readyState === 'complete') {
+      scheduleHomepageCatalog();
     } else {
-      globalThis.setTimeout(loadHomepageCatalog, 1);
+      window.addEventListener('load', scheduleHomepageCatalog, { once: true });
     }
   </script>
 </BaseLayout>
