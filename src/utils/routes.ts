@@ -10,10 +10,15 @@ export function collectionPath(collectionOrSlug: ShoppegoCollection | string): s
   return `/categories/${encodeURIComponent(slug)}`;
 }
 
+export function pagePath(slug: string): string {
+  return `/pages/${encodeURIComponent(slug)}`;
+}
+
 export function normalizeMenuUrl(link: ShoppegoMenuLink): string {
   if (!link.url) return '#';
   if (link.type === 'collection' && link.handle) return collectionPath(link.handle);
   if (link.type === 'product' && link.handle) return productPath(link.handle);
+  if (link.type === 'page' && link.handle) return pagePath(link.handle);
   if (link.url.startsWith('/')) return link.url;
 
   try {

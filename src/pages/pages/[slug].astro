@@ -1,33 +1,44 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/content/PageHeader.astro';
-import { StoreService } from '@services/index';
-import { staticPages, type StaticPage } from '@data/staticPages';
+import { PageService, StoreService } from '@services/index';
+import { sanitizeHtml } from '@utils/sanitize';
 
-export function getStaticPaths() {
-  return staticPages.map((page: StaticPage) => ({
-    params: { slug: page.slug },
-    props: { page }
+export async function getStaticPaths() {
+  const pages = await PageService.list();
+
+  return pages.map((page) => ({
+    params: { slug: page.slug }
   }));
 }
 
-const { page } = Astro.props as { page: StaticPage };
-const store = await StoreService.getStore();
+const { slug } = Astro.params;
+const [store, page] = await Promise.all([
+  StoreService.getStore(),
+  PageService.getBySlug(slug as string)
+]);
+
+const builder = page.metafields?.builder;
+const builderCss = typeof builder === 'object' && builder !== null && 'css' in builder && typeof builder.css === 'string'
+  ? builder.css
+  : '';
+const builderJs = typeof builder === 'object' && builder !== null && 'js' in builder && typeof builder.js === 'string'
+  ? builder.js
+  : '';
+const description = page.body?.replace(/<[^>]*>/g, '').slice(0, 150) || `Read ${page.title} from ${store.name}.`;
 ---
 
-<BaseLayout title={`${page.title} | ${store.name}`} description={page.description}>
+<BaseLayout title={`${page.title} | ${store.name}`} description={description}>
   <main>
     <section class="min-h-[70vh] bg-card py-10 md:py-16">
       <div class="mx-auto max-w-4xl px-5">
-        <PageHeader title={page.title} description={page.description} />
-        <div class="space-y-8">
-          {page.sections.map((section: StaticPage['sections'][number]) => (
-            <section class="border-t border-secondary-border/40 pt-8">
-              <h2 class="mb-3 font-display text-2xl font-semibold text-accent">{section.heading}</h2>
-              <p class="leading-relaxed text-secondary">{section.body}</p>
-            </section>
-          ))}
-        </div>
+        <PageHeader title={page.title} />
+        {page.image && (
+          <img src={page.image} alt={page.title} class="mb-8 w-full border border-secondary-border/30 object-cover" loading="eager" />
+        )}
+        {builderCss && <style is:inline set:html={builderCss} />}
+        <div class="prose-jugra max-w-none text-secondary" set:html={sanitizeHtml(page.body)} />
+        {builderJs && <script is:inline set:html={builderJs} />}
       </div>
     </section>
   </main>

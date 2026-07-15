@@ -17,8 +17,8 @@ const [store, menus] = await Promise.all([
   StoreService.getStore(),
   MenuService.list()
 ]);
-const mainMenu = menus.find((menu) => menu.handle === 'main_menu') || menus[0] || null;
-const footerMenu = menus.find((menu) => menu.handle === 'footer_menu') || null;
+const mainMenu = menus.find((menu) => ['main_menu', 'main-menu'].includes(menu.handle)) || menus[0] || null;
+const footerMenu = menus.find((menu) => ['footer_menu', 'footer-menu'].includes(menu.handle)) || null;
 ---
 
 <!doctype html>

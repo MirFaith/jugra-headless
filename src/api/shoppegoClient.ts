@@ -30,6 +30,8 @@ interface RequestOptions {
 
 const defaultCacheTtlMs = import.meta.env.DEV ? 0 : 60_000;
 const memoryCache = new Map<string, { expiresAt: number; value: unknown }>();
+const minGetIntervalMs = Number(import.meta.env.SHOPPEGO_API_MIN_INTERVAL_MS || (import.meta.env.DEV ? 0 : 550));
+let nextGetRequestAt = 0;
 
 function getBaseUrl(): string {
   return getRequiredPublicEnv('PUBLIC_SHOPPEGO_API_BASE_URL').replace(/\/+$/, '');
@@ -82,6 +84,26 @@ function fallbackMessage(status: number, retryAfter?: number): string {
   return 'The storefront API request failed.';
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => globalThis.setTimeout(resolve, ms));
+}
+
+async function throttleGetRequests(method: string) {
+  if (method !== 'GET' || minGetIntervalMs <= 0) return;
+
+  const now = Date.now();
+  const waitMs = Math.max(0, nextGetRequestAt - now);
+  nextGetRequestAt = Math.max(now, nextGetRequestAt) + minGetIntervalMs;
+
+  if (waitMs > 0) {
+    await sleep(waitMs);
+  }
+}
+
+function shouldRetry(response: Response, attempt: number): boolean {
+  return attempt < 3 && (response.status === 429 || response.status >= 500);
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method || 'GET';
   const cacheKey = method === 'GET' ? buildUrl(path) : '';
@@ -94,16 +116,34 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     }
   }
 
-  const response = await fetch(buildUrl(path), {
-    method,
-    headers: {
-      Accept: 'application/json',
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      'X-Storefront-Token': getToken()
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
-  const payload = await readJson(response);
+  let response: Response | null = null;
+  let payload: unknown = null;
+
+  for (let attempt = 0; attempt <= 3; attempt += 1) {
+    await throttleGetRequests(method);
+
+    response = await fetch(buildUrl(path), {
+      method,
+      headers: {
+        Accept: 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        'X-Storefront-Token': getToken()
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    payload = await readJson(response);
+
+    if (!shouldRetry(response, attempt)) {
+      break;
+    }
+
+    const retryAfter = Number(response.headers.get('Retry-After') || 0);
+    await sleep(Math.max(retryAfter * 1000, minGetIntervalMs || 1000));
+  }
+
+  if (!response) {
+    throw new Error('The storefront API request could not be completed.');
+  }
 
   if (!response.ok) {
     throw toApiError(response, payload);

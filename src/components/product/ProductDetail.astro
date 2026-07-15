@@ -1,6 +1,7 @@
 ---
 import type { ShoppegoCurrency, ShoppegoProduct, ShoppegoProductOption, ShoppegoProductVariant } from '@models/shoppego';
 import { formatMoney } from '@utils/money';
+import { collectionPath } from '@utils/routes';
 import { sanitizeHtml } from '@utils/sanitize';
 
 interface Props {
@@ -9,8 +10,19 @@ interface Props {
 }
 
 const { product, currency } = Astro.props;
-const images = product.images.length > 0 ? product.images : product.featured_image ? [product.featured_image] : [];
-const firstVariant = product.variants.find((variant) => variant.available) || product.variants[0];
+const firstVariant = product.selected_or_first_available_variant?.id
+  ? product.variants.find((variant) => variant.id === product.selected_or_first_available_variant?.id) || product.selected_or_first_available_variant
+  : product.variants.find((variant) => variant.available) || product.variants[0];
+const images = Array.from(new Set([
+  firstVariant?.image || null,
+  product.featured_image,
+  ...product.images,
+  ...product.variants.map((variant) => variant.image || null)
+].filter((image): image is string => Boolean(image))));
+const productCollections = product.collections || [];
+const reviews = product.reviews || [];
+const wholesalePrices = product.wholesale_prices || [];
+const bundleProducts = product.bundle_products || [];
 const selectableOptions = product.options.filter((option) => {
   return ['radio', 'select', 'swatch'].includes(option.type) && option.name !== 'Default' && !product.has_only_default_variant;
 });
@@ -38,6 +50,19 @@ function variantOptionsLabel(variant: ShoppegoProductVariant) {
     .map(([name, value]) => `${name}: ${value}`)
     .join(', ');
 }
+
+function stockLabel(variant: ShoppegoProductVariant | null | undefined) {
+  if (!variant) return product.available ? 'Available' : 'Sold out';
+  if (!variant.available) return 'Sold out';
+  if (variant.manage_stock && typeof variant.inventory_quantity === 'number') {
+    return variant.inventory_quantity > 0 ? `${variant.inventory_quantity} available` : 'Sold out';
+  }
+  return 'Available';
+}
+
+function bundleImage(bundleProduct: { featured_image: string | null; images: string[]; selected_or_first_available_variant: ShoppegoProductVariant | null }) {
+  return bundleProduct.selected_or_first_available_variant?.image || bundleProduct.featured_image || bundleProduct.images[0] || null;
+}
 ---
 
 <section class="bg-card py-0 md:py-16">
@@ -48,7 +73,7 @@ function variantOptionsLabel(variant: ShoppegoProductVariant) {
           <div class="relative mb-0 overflow-hidden bg-secondary-border/20 md:mb-2" id="product-gallery-main">
             {images.length > 0 ? (
               images.map((image, index) => (
-                <div class:list={['product-gallery-slide', index !== 0 && 'hidden']}>
+                <div class:list={['product-gallery-slide', index !== 0 && 'hidden']} data-gallery-image={image}>
                   <img
                     src={image}
                     alt={`${product.name} - Image ${index + 1}`}
@@ -72,6 +97,7 @@ function variantOptionsLabel(variant: ShoppegoProductVariant) {
                     index === 0 ? 'border-secondary-border' : 'border-transparent'
                   ]}
                   data-gallery-index={index}
+                  data-gallery-image={image}
                   aria-label={`View image ${index + 1}`}
                 >
                   <img src={image} alt={`${product.name} thumbnail ${index + 1}`} class="h-full w-full object-cover md:h-auto" loading="lazy" />
@@ -86,6 +112,12 @@ function variantOptionsLabel(variant: ShoppegoProductVariant) {
         <nav class="mb-4 text-sm" aria-label="Breadcrumb">
           <ol class="flex items-center gap-2 text-secondary">
             <li><a href="/products" class="hover:text-primary">Products</a></li>
+            {productCollections[0] && (
+              <>
+                <li aria-hidden="true">/</li>
+                <li><a href={collectionPath(productCollections[0].slug)} class="hover:text-primary">{productCollections[0].name}</a></li>
+              </>
+            )}
           </ol>
         </nav>
 
@@ -108,6 +140,20 @@ function variantOptionsLabel(variant: ShoppegoProductVariant) {
             {product.price_varies && <sup>+</sup>}
           </p>
         </div>
+
+        <p id="product-stock-status" class="mb-4 text-sm text-secondary">
+          {stockLabel(firstVariant)}
+        </p>
+
+        {productCollections.length > 0 && (
+          <div class="mb-6 flex flex-wrap gap-2">
+            {productCollections.map((collection) => (
+              <a href={collectionPath(collection.slug)} class="border border-secondary-border/50 px-3 py-1 text-xs uppercase tracking-widest text-secondary transition-colors hover:border-primary hover:text-primary">
+                {collection.name}
+              </a>
+            ))}
+          </div>
+        )}
 
         <form id="product-form" data-product={productJson} data-currency={currencyJson}>
           <input type="hidden" id="selected-variant-id" name="variant_id" value={selectableOptions.length > 0 ? '' : firstVariant?.id ?? ''} />
@@ -261,6 +307,87 @@ function variantOptionsLabel(variant: ShoppegoProductVariant) {
         )}
       </div>
     </div>
+
+    {wholesalePrices.length > 0 && (
+      <section class="mt-12 border-t border-secondary-border/40 px-5 pt-10 md:px-0">
+        <h2 class="mb-6 font-display text-2xl font-semibold text-accent">Wholesale pricing</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full border border-secondary-border/40 text-left text-sm">
+            <thead class="bg-secondary-border/10 text-accent">
+              <tr>
+                <th class="px-4 py-3 font-medium">Quantity</th>
+                <th class="px-4 py-3 font-medium">Unit price</th>
+                <th class="px-4 py-3 font-medium">Saving</th>
+              </tr>
+            </thead>
+            <tbody>
+              {wholesalePrices.map((tier) => (
+                <tr class="border-t border-secondary-border/30">
+                  <td class="px-4 py-3 text-secondary">
+                    {tier.maximum_quantity ? `${tier.minimum_quantity} - ${tier.maximum_quantity}` : `${tier.minimum_quantity}+`}
+                  </td>
+                  <td class="px-4 py-3 text-accent">{formatMoney(tier.unit_price, currency)}</td>
+                  <td class="px-4 py-3 text-secondary">{formatMoney(tier.saving_per_unit, currency)} / unit</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )}
+
+    {bundleProducts.length > 0 && (
+      <section class="mt-12 border-t border-secondary-border/40 px-5 pt-10 md:px-0">
+        <h2 class="mb-6 font-display text-2xl font-semibold text-accent">Included in this bundle</h2>
+        <div class="grid gap-4 md:grid-cols-2">
+          {bundleProducts.map((bundleProduct) => {
+            const selectedVariant = bundleProduct.selected_or_first_available_variant || bundleProduct.variants.find((variant) => variant.available) || bundleProduct.variants[0] || null;
+            const image = bundleImage(bundleProduct);
+
+            return (
+              <article class="flex gap-4 border border-secondary-border/40 p-4">
+                <div class="h-24 w-24 flex-shrink-0 bg-secondary-border/20">
+                  {image && <img src={image} alt={bundleProduct.name} class="h-full w-full object-cover" loading="lazy" />}
+                </div>
+                <div class="min-w-0">
+                  <h3 class="font-medium text-accent">{bundleProduct.name}</h3>
+                  {selectedVariant && (
+                    <>
+                      <p class="mt-1 text-sm text-secondary">{variantOptionsLabel(selectedVariant) || selectedVariant.title}</p>
+                      <p class="mt-1 text-sm text-secondary">
+                        Quantity included: {selectedVariant.fixed_quantity || 1}
+                      </p>
+                      <p class="mt-1 text-sm text-secondary">{stockLabel(selectedVariant)}</p>
+                    </>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    )}
+
+    {reviews.length > 0 && (
+      <section class="mt-12 border-t border-secondary-border/40 px-5 pt-10 md:px-0">
+        <h2 class="mb-6 font-display text-2xl font-semibold text-accent">Customer reviews</h2>
+        <div class="grid gap-4 md:grid-cols-2">
+          {reviews.map((review) => (
+            <article class="border border-secondary-border/40 p-5">
+              <div class="mb-3 flex items-center justify-between gap-4">
+                <p class="font-medium text-accent">{review.customer_name || 'Verified customer'}</p>
+                <p class="text-sm text-secondary">
+                  Rating {Math.max(0, Math.min(5, review.rating))}/5
+                </p>
+              </div>
+              {review.variant && <p class="mb-2 text-xs uppercase tracking-widest text-secondary">{review.variant}</p>}
+              <p class="leading-relaxed text-secondary">{review.description}</p>
+              <p class="mt-4 text-xs text-secondary">{review.created_at}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+    )}
   </div>
 </section>
 
@@ -285,12 +412,22 @@ function variantOptionsLabel(variant: ShoppegoProductVariant) {
     const selectedVariantInput = document.getElementById('selected-variant-id') as HTMLInputElement | null;
     const priceEl = document.getElementById('product-price');
     const compareEl = document.getElementById('product-compare-price');
+    const stockEl = document.getElementById('product-stock-status');
     const alertEl = document.getElementById('product-alert');
     const quantityInput = document.getElementById('product-quantity') as HTMLInputElement | null;
     const optionButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.product-option-button'));
     const addButton = document.getElementById('btn-add-to-cart') as HTMLButtonElement | null;
     const buyButton = document.getElementById('btn-buynow') as HTMLButtonElement | null;
     const selections: Record<string, string> = {};
+
+    function stockLabel(variant: ShoppegoProductVariant | null) {
+      if (!variant) return product.available ? 'Available' : 'Sold out';
+      if (!variant.available) return 'Sold out';
+      if (variant.manage_stock && typeof variant.inventory_quantity === 'number') {
+        return variant.inventory_quantity > 0 ? `${variant.inventory_quantity} available` : 'Sold out';
+      }
+      return 'Available';
+    }
 
     function findVariant(): ShoppegoProductVariant | null {
       const selectableOptions = (product.options || []).filter((option) => {
@@ -306,6 +443,23 @@ function variantOptionsLabel(variant: ShoppegoProductVariant) {
       }) || product.variants?.[0] || null;
     }
 
+    function showGalleryImage(image: string) {
+      let matchedIndex = -1;
+      document.querySelectorAll<HTMLElement>('.product-gallery-slide').forEach((slide, slideIndex) => {
+        if (slide.dataset.galleryImage === image) matchedIndex = slideIndex;
+      });
+
+      if (matchedIndex < 0) return;
+
+      document.querySelectorAll('.product-gallery-slide').forEach((slide, slideIndex) => {
+        slide.classList.toggle('hidden', slideIndex !== matchedIndex);
+      });
+      document.querySelectorAll<HTMLButtonElement>('.product-gallery-thumb').forEach((thumb, thumbIndex) => {
+        thumb.classList.toggle('border-secondary-border', thumbIndex === matchedIndex);
+        thumb.classList.toggle('border-transparent', thumbIndex !== matchedIndex);
+      });
+    }
+
     function syncVariant() {
       const variant = findVariant();
       if (!variant) return;
@@ -317,6 +471,8 @@ function variantOptionsLabel(variant: ShoppegoProductVariant) {
         compareEl.textContent = hasCompare ? formatMoney(variant.compare_at_price as number, currency) : '';
         compareEl.classList.toggle('hidden', !hasCompare);
       }
+      if (stockEl) stockEl.textContent = stockLabel(variant);
+      if (variant.image) showGalleryImage(variant.image);
       document.querySelectorAll<HTMLButtonElement>('#btn-add-to-cart, #btn-buynow').forEach((button) => {
         button.disabled = !variant.available;
         button.classList.toggle('opacity-50', !variant.available);

@@ -8,6 +8,10 @@ export interface ShoppegoCurrency {
 
 export interface ShoppegoStore {
   name: string;
+  description?: string | null;
+  checkout_enabled?: boolean;
+  checkout_minimum_purchase?: number;
+  category_featured?: string | null;
   currency: ShoppegoCurrency;
   online_store_url: string;
 }
@@ -71,7 +75,41 @@ export interface ShoppegoProductVariant {
   compare_at_price: number | null;
   available: boolean;
   requires_shipping: boolean;
+  manage_stock?: boolean;
+  inventory_quantity?: number | null;
+  fixed_quantity?: number | null;
+  image?: string | null;
   options: Record<string, string>;
+}
+
+export interface ShoppegoProductReview {
+  customer_name: string | null;
+  variant: string | null;
+  rating: number;
+  description: string;
+  created_at: string;
+}
+
+export interface ShoppegoWholesalePrice {
+  minimum_quantity: number;
+  maximum_quantity: number | null;
+  unit_price: number;
+  saving_per_unit: number;
+}
+
+export interface ShoppegoProductCollection {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+export interface ShoppegoBundleProduct {
+  id: number;
+  name: string;
+  featured_image: string | null;
+  images: string[];
+  selected_or_first_available_variant: ShoppegoProductVariant | null;
+  variants: ShoppegoProductVariant[];
 }
 
 export interface ShoppegoProduct {
@@ -89,8 +127,16 @@ export interface ShoppegoProduct {
   images: string[];
   has_options: boolean;
   has_only_default_variant?: boolean;
+  is_bundle?: boolean;
+  metafields?: Record<string, unknown>;
+  selected_or_first_available_variant?: ShoppegoProductVariant | null;
   options: ShoppegoProductOption[];
   variants: ShoppegoProductVariant[];
+  collections?: ShoppegoProductCollection[];
+  reviews?: ShoppegoProductReview[];
+  wholesale_prices?: ShoppegoWholesalePrice[];
+  bundle_products?: ShoppegoBundleProduct[];
+  related?: ShoppegoProduct[] | null;
 }
 
 export interface ShoppegoCollection {
@@ -129,6 +175,22 @@ export interface ShoppegoMenu {
   title: string;
   handle: string;
   links: ShoppegoMenuLink[];
+}
+
+export interface ShoppegoPageSummary {
+  id: number;
+  title: string;
+  slug: string;
+  url: string;
+}
+
+export interface ShoppegoPage extends ShoppegoPageSummary {
+  body: string | null;
+  image: string | null;
+  template: string | null;
+  metafields: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ShoppegoCheckoutLineInput {

@@ -3,8 +3,10 @@ import type { ShoppegoApiEnvelope, ShoppegoProduct } from '@models/shoppego';
 import { assertProduct, assertProductList } from '@utils/validators';
 
 export class ProductService {
-  static async list(page = 1): Promise<ShoppegoApiEnvelope<ShoppegoProduct[]>> {
-    const envelope = await shoppegoClient.getEnvelope<ShoppegoProduct[]>(`/products?page=${page}`);
+  static async list(page = 1, query?: string): Promise<ShoppegoApiEnvelope<ShoppegoProduct[]>> {
+    const params = new URLSearchParams({ page: String(page) });
+    if (query?.trim()) params.set('q', query.trim());
+    const envelope = await shoppegoClient.getEnvelope<ShoppegoProduct[]>(`/products?${params.toString()}`);
     assertProductList(envelope.data);
     return envelope;
   }
@@ -33,6 +35,10 @@ export class ProductService {
     const product = await shoppegoClient.getData<ShoppegoProduct>(`/products/${encodeURIComponent(slug)}`);
     assertProduct(product);
     return product;
+  }
+
+  static async search(query: string, page = 1): Promise<ShoppegoApiEnvelope<ShoppegoProduct[]>> {
+    return this.list(page, query);
   }
 
   static findFirstAvailableVariant(product: ShoppegoProduct) {

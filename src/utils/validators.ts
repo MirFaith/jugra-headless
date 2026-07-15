@@ -3,6 +3,8 @@ import type {
   ShoppegoCollection,
   ShoppegoCollectionDetail,
   ShoppegoMenu,
+  ShoppegoPage,
+  ShoppegoPageSummary,
   ShoppegoProduct,
   ShoppegoStore
 } from '@models/shoppego';
@@ -77,6 +79,28 @@ export function assertCollectionDetail(value: unknown): asserts value is Shoppeg
 export function assertMenuList(value: unknown): asserts value is ShoppegoMenu[] {
   if (!Array.isArray(value)) {
     throw new Error('Invalid menu response from Shoppego API.');
+  }
+}
+
+export function assertPageSummary(value: unknown): asserts value is ShoppegoPageSummary {
+  if (!isRecord(value) || !isNumber(value.id) || !isString(value.title) || !isString(value.slug)) {
+    throw new Error('Invalid page response from Shoppego API.');
+  }
+}
+
+export function assertPageList(value: unknown): asserts value is ShoppegoPageSummary[] {
+  if (!Array.isArray(value)) {
+    throw new Error('Invalid page list response from Shoppego API.');
+  }
+
+  value.forEach(assertPageSummary);
+}
+
+export function assertPage(value: unknown): asserts value is ShoppegoPage {
+  assertPageSummary(value);
+
+  if (!isRecord(value) || !('body' in value)) {
+    throw new Error('Invalid page detail response from Shoppego API.');
   }
 }
 

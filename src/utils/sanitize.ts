@@ -1,4 +1,4 @@
-const dangerousTags = /<\/?(script|iframe|object|embed|form|input|button|textarea|select|option|meta|link|style)[^>]*>/gi;
+const dangerousTags = /<\/?(script|object|embed|meta|link)[^>]*>/gi;
 const inlineEventHandlers = /\son[a-z]+\s*=\s*(['"]).*?\1/gi;
 const javascriptUrls = /(href|src)\s*=\s*(['"])\s*javascript:.*?\2/gi;
 

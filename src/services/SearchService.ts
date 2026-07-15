@@ -2,39 +2,26 @@ import { ProductService } from './ProductService';
 
 export class SearchService {
   static async searchProducts(query: string, page = 1) {
-    const normalizedQuery = query.trim().toLowerCase();
-    const envelope = await ProductService.list(page);
-
-    if (!normalizedQuery) {
-      return envelope;
-    }
-
-    return {
-      ...envelope,
-      data: envelope.data.filter((product) => {
-        return [
-          product.name,
-          product.slug,
-          product.description || ''
-        ].some((field) => field.toLowerCase().includes(normalizedQuery));
-      })
-    };
+    return ProductService.search(query, page);
   }
 
   static async searchAllProducts(query: string) {
-    const normalizedQuery = query.trim().toLowerCase();
-    const products = await ProductService.listAll();
+    const firstPage = await ProductService.search(query, 1);
+    const products = [...firstPage.data];
+    const lastPage = firstPage.meta?.last_page || 1;
 
-    if (!normalizedQuery) {
+    if (lastPage <= 1) {
       return products;
     }
 
-    return products.filter((product) => {
-      return [
-        product.name,
-        product.slug,
-        product.description || ''
-      ].some((field) => field.toLowerCase().includes(normalizedQuery));
+    const remainingPages = await Promise.all(
+      Array.from({ length: lastPage - 1 }, (_, index) => ProductService.search(query, index + 2))
+    );
+
+    remainingPages.forEach((page) => {
+      products.push(...page.data);
     });
+
+    return products;
   }
 }

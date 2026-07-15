@@ -8,16 +8,16 @@ export async function getStaticPaths() {
   const products = await ProductService.listAll();
 
   return products.map((product) => ({
-    params: { slug: product.slug },
-    props: {
-      product,
-      relatedProducts: products.filter((item) => item.slug !== product.slug).slice(0, 3)
-    }
+    params: { slug: product.slug }
   }));
 }
 
-const { product, relatedProducts } = Astro.props;
-const store = await StoreService.getStore();
+const { slug } = Astro.params;
+const [store, product] = await Promise.all([
+  StoreService.getStore(),
+  ProductService.getBySlug(slug as string)
+]);
+const relatedProducts = product.related || [];
 ---
 
 <BaseLayout title={`${product.name} | ${store.name}`} description={product.description?.replace(/<[^>]*>/g, '').slice(0, 150) || `Shop ${product.name} from ${store.name}.`}>

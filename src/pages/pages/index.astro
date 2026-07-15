@@ -1,10 +1,13 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/content/PageHeader.astro';
-import { StoreService } from '@services/index';
-import { staticPages, type StaticPage } from '@data/staticPages';
+import { PageService, StoreService } from '@services/index';
+import { pagePath } from '@utils/routes';
 
-const store = await StoreService.getStore();
+const [store, pages] = await Promise.all([
+  StoreService.getStore(),
+  PageService.list()
+]);
 ---
 
 <BaseLayout title={`Pages | ${store.name}`} description={`Browse information pages from ${store.name}.`}>
@@ -14,13 +17,13 @@ const store = await StoreService.getStore();
         <PageHeader
           eyebrow="Pages"
           title="Store information"
-          description="Helpful customer pages and fallback content routes for menu links."
+          description={`Helpful customer pages from ${store.name}.`}
         />
         <div class="grid gap-4 md:grid-cols-2">
-          {staticPages.map((page: StaticPage) => (
-            <a href={`/pages/${page.slug}`} class="block border border-secondary-border/40 p-6 transition-colors hover:border-primary">
+          {pages.map((page) => (
+            <a href={pagePath(page.slug)} class="block border border-secondary-border/40 p-6 transition-colors hover:border-primary">
               <h2 class="mb-2 font-display text-2xl font-semibold text-accent">{page.title}</h2>
-              <p class="text-sm leading-relaxed text-secondary">{page.description}</p>
+              <p class="text-sm leading-relaxed text-secondary">View page</p>
             </a>
           ))}
         </div>

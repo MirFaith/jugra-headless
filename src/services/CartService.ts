@@ -72,7 +72,7 @@ export class CartService {
   }
 
   private static toCartLine(input: AddToCartInput, quantity: number): CartLine {
-    const image = input.product.featured_image || input.product.images[0] || null;
+    const image = input.variant.image || input.product.featured_image || input.product.images[0] || null;
 
     return {
       variantId: input.variant.id,
