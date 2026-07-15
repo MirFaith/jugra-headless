@@ -14,7 +14,6 @@ const firstVariant = product.selected_or_first_available_variant?.id
   ? product.variants.find((variant) => variant.id === product.selected_or_first_available_variant?.id) || product.selected_or_first_available_variant
   : product.variants.find((variant) => variant.available) || product.variants[0];
 const images = Array.from(new Set([
-  firstVariant?.image || null,
   product.featured_image,
   ...product.images,
   ...product.variants.map((variant) => variant.image || null)
@@ -63,6 +62,10 @@ function stockLabel(variant: ShoppegoProductVariant | null | undefined) {
 function bundleImage(bundleProduct: { featured_image: string | null; images: string[]; selected_or_first_available_variant: ShoppegoProductVariant | null }) {
   return bundleProduct.selected_or_first_available_variant?.image || bundleProduct.featured_image || bundleProduct.images[0] || null;
 }
+
+function optionValueImage(option: ShoppegoProductOption, value: string) {
+  return product.variants.find((variant) => variant.options?.[option.name] === value && variant.image)?.image || null;
+}
 ---
 
 <section class="bg-card py-0 md:py-16">
@@ -73,7 +76,7 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
           <div class="relative mb-0 overflow-hidden bg-secondary-border/20 md:mb-2" id="product-gallery-main">
             {images.length > 0 ? (
               images.map((image, index) => (
-                <div class:list={['product-gallery-slide', index !== 0 && 'hidden']} data-gallery-image={image}>
+                <div class:list={['product-gallery-slide flex items-center justify-center', index !== 0 && 'hidden']} data-gallery-image={image}>
                   <img
                     src={image}
                     alt={`${product.name} - Image ${index + 1}`}
@@ -84,6 +87,31 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
               ))
             ) : (
               <div class="aspect-square w-full bg-secondary-border/20"></div>
+            )}
+
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  id="carousel-prev"
+                  class="absolute left-4 top-1/2 z-10 flex -translate-y-1/2 items-center justify-center text-white/80 transition-all hover:text-white"
+                  aria-label="Previous image"
+                >
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  id="carousel-next"
+                  class="absolute right-4 top-1/2 z-10 flex -translate-y-1/2 items-center justify-center text-white/80 transition-all hover:text-white"
+                  aria-label="Next image"
+                >
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </>
             )}
           </div>
 
@@ -111,10 +139,10 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
       <div class="product-info px-5 py-8 md:px-0 md:py-0">
         <nav class="mb-4 text-sm" aria-label="Breadcrumb">
           <ol class="flex items-center gap-2 text-secondary">
-            <li><a href="/products" class="hover:text-primary">Products</a></li>
+            <li><span>Products</span></li>
             {productCollections[0] && (
               <>
-                <li aria-hidden="true">/</li>
+                <li aria-hidden="true">&gt;</li>
                 <li><a href={collectionPath(productCollections[0].slug)} class="hover:text-primary">{productCollections[0].name}</a></li>
               </>
             )}
@@ -141,20 +169,6 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
           </p>
         </div>
 
-        <p id="product-stock-status" class="mb-4 text-sm text-secondary">
-          {stockLabel(firstVariant)}
-        </p>
-
-        {productCollections.length > 0 && (
-          <div class="mb-6 flex flex-wrap gap-2">
-            {productCollections.map((collection) => (
-              <a href={collectionPath(collection.slug)} class="border border-secondary-border/50 px-3 py-1 text-xs uppercase tracking-widest text-secondary transition-colors hover:border-primary hover:text-primary">
-                {collection.name}
-              </a>
-            ))}
-          </div>
-        )}
-
         <form id="product-form" data-product={productJson} data-currency={currencyJson}>
           <input type="hidden" id="selected-variant-id" name="variant_id" value={selectableOptions.length > 0 ? '' : firstVariant?.id ?? ''} />
           <div id="product-alert" class="mb-4 hidden rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -169,6 +183,7 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
                   <div class:list={[option.type === 'swatch' ? 'flex flex-wrap gap-3' : 'grid grid-cols-2 gap-3']}>
                     {option.values.map((value) => {
                       const available = optionValueIsAvailable(option, value.name);
+                      const image = optionValueImage(option, value.name);
                       const colors = value.metadata?.colors || ['#E2E0DC'];
 
                       return option.type === 'swatch' ? (
@@ -193,14 +208,25 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
                         <button
                           type="button"
                           class:list={[
-                            'product-option-button relative flex w-full items-center justify-center overflow-hidden border border-secondary-border px-4 py-3 text-sm font-medium text-accent transition-all hover:border-primary',
+                            'product-option-button relative flex w-full items-center justify-start gap-4 overflow-hidden border border-secondary-border text-sm font-medium text-accent transition-all hover:border-primary',
                             !available && 'cursor-not-allowed opacity-30'
                           ]}
                           data-option-name={option.name}
                           data-option-value={value.name}
                           data-sold-out={!available}
                         >
-                          <span>{value.name}</span>
+                          {image && (
+                            <div class="h-14 w-14 flex-shrink-0 overflow-hidden bg-secondary-border/10">
+                              <img src={image} alt={value.name} class="h-full w-full object-cover" loading="lazy" />
+                            </div>
+                          )}
+                          <span class="pr-3">{value.name}</span>
+                          <span class="option-active-indicator absolute bottom-0 right-0 hidden" aria-hidden="true">
+                            <span class="block h-0 w-0 border-b-[24px] border-l-[24px] border-b-primary border-l-transparent"></span>
+                            <svg class="absolute h-2.5 w-2.5 text-white" style="left: 12px; top: 11px;" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                          </span>
                         </button>
                       );
                     })}
@@ -209,6 +235,11 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
               ))}
             </div>
           )}
+
+          <div id="product-stock-status" class="mb-4 hidden text-sm text-secondary">
+            <span data-stock-count></span>
+            <span data-stock-label>pieces available</span>
+          </div>
 
           {customOptions.length > 0 && (
             <div class="mb-6">
@@ -412,21 +443,22 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
     const selectedVariantInput = document.getElementById('selected-variant-id') as HTMLInputElement | null;
     const priceEl = document.getElementById('product-price');
     const compareEl = document.getElementById('product-compare-price');
-    const stockEl = document.getElementById('product-stock-status');
+    const stockEl = document.getElementById('product-stock-status') as HTMLElement | null;
+    const stockCountEl = stockEl?.querySelector<HTMLElement>('[data-stock-count]') || null;
     const alertEl = document.getElementById('product-alert');
     const quantityInput = document.getElementById('product-quantity') as HTMLInputElement | null;
     const optionButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.product-option-button'));
     const addButton = document.getElementById('btn-add-to-cart') as HTMLButtonElement | null;
     const buyButton = document.getElementById('btn-buynow') as HTMLButtonElement | null;
     const selections: Record<string, string> = {};
+    let activeGalleryIndex = 0;
 
-    function stockLabel(variant: ShoppegoProductVariant | null) {
-      if (!variant) return product.available ? 'Available' : 'Sold out';
-      if (!variant.available) return 'Sold out';
-      if (variant.manage_stock && typeof variant.inventory_quantity === 'number') {
-        return variant.inventory_quantity > 0 ? `${variant.inventory_quantity} available` : 'Sold out';
+    function syncStock(variant: ShoppegoProductVariant | null) {
+      const shouldShowStock = Boolean(variant?.available && variant.manage_stock && typeof variant.inventory_quantity === 'number');
+      stockEl?.classList.toggle('hidden', !shouldShowStock);
+      if (stockCountEl && shouldShowStock) {
+        stockCountEl.textContent = String(variant?.inventory_quantity || 0);
       }
-      return 'Available';
     }
 
     function findVariant(): ShoppegoProductVariant | null {
@@ -443,6 +475,20 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
       }) || product.variants?.[0] || null;
     }
 
+    function showGalleryIndex(index: number) {
+      const slides = Array.from(document.querySelectorAll('.product-gallery-slide'));
+      if (!slides.length) return;
+
+      activeGalleryIndex = (index + slides.length) % slides.length;
+      slides.forEach((slide, slideIndex) => {
+        slide.classList.toggle('hidden', slideIndex !== activeGalleryIndex);
+      });
+      document.querySelectorAll<HTMLButtonElement>('.product-gallery-thumb').forEach((thumb, thumbIndex) => {
+        thumb.classList.toggle('border-secondary-border', thumbIndex === activeGalleryIndex);
+        thumb.classList.toggle('border-transparent', thumbIndex !== activeGalleryIndex);
+      });
+    }
+
     function showGalleryImage(image: string) {
       let matchedIndex = -1;
       document.querySelectorAll<HTMLElement>('.product-gallery-slide').forEach((slide, slideIndex) => {
@@ -450,14 +496,7 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
       });
 
       if (matchedIndex < 0) return;
-
-      document.querySelectorAll('.product-gallery-slide').forEach((slide, slideIndex) => {
-        slide.classList.toggle('hidden', slideIndex !== matchedIndex);
-      });
-      document.querySelectorAll<HTMLButtonElement>('.product-gallery-thumb').forEach((thumb, thumbIndex) => {
-        thumb.classList.toggle('border-secondary-border', thumbIndex === matchedIndex);
-        thumb.classList.toggle('border-transparent', thumbIndex !== matchedIndex);
-      });
+      showGalleryIndex(matchedIndex);
     }
 
     function syncVariant() {
@@ -471,7 +510,7 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
         compareEl.textContent = hasCompare ? formatMoney(variant.compare_at_price as number, currency) : '';
         compareEl.classList.toggle('hidden', !hasCompare);
       }
-      if (stockEl) stockEl.textContent = stockLabel(variant);
+      syncStock(variant);
       if (variant.image) showGalleryImage(variant.image);
       document.querySelectorAll<HTMLButtonElement>('#btn-add-to-cart, #btn-buynow').forEach((button) => {
         button.disabled = !variant.available;
@@ -492,9 +531,11 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
         button.closest('[data-option-group]')?.querySelectorAll('.product-option-button').forEach((sibling) => {
           sibling.classList.remove('border-primary');
           sibling.classList.add('border-secondary-border');
+          sibling.querySelector('.option-active-indicator')?.classList.add('hidden');
         });
         button.classList.add('border-primary');
         button.classList.remove('border-secondary-border');
+        button.querySelector('.option-active-indicator')?.classList.remove('hidden');
         alertEl?.classList.add('hidden');
         syncVariant();
       });
@@ -512,17 +553,16 @@ function bundleImage(bundleProduct: { featured_image: string | null; images: str
 
     document.querySelectorAll<HTMLButtonElement>('.product-gallery-thumb').forEach((thumb) => {
       thumb.addEventListener('click', () => {
-        const index = thumb.dataset.galleryIndex;
-        document.querySelectorAll('.product-gallery-slide').forEach((slide, slideIndex) => {
-          slide.classList.toggle('hidden', String(slideIndex) !== index);
-        });
-        document.querySelectorAll('.product-gallery-thumb').forEach((other) => {
-          other.classList.remove('border-secondary-border');
-          other.classList.add('border-transparent');
-        });
-        thumb.classList.add('border-secondary-border');
-        thumb.classList.remove('border-transparent');
+        showGalleryIndex(Number(thumb.dataset.galleryIndex || 0));
       });
+    });
+
+    document.getElementById('carousel-prev')?.addEventListener('click', () => {
+      showGalleryIndex(activeGalleryIndex - 1);
+    });
+
+    document.getElementById('carousel-next')?.addEventListener('click', () => {
+      showGalleryIndex(activeGalleryIndex + 1);
     });
 
     function getSelectedVariant(): ShoppegoProductVariant | null {
