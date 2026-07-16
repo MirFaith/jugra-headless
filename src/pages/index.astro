@@ -14,7 +14,7 @@ const currencyJson = JSON.stringify(store.currency);
     <section class="bg-card py-10 md:py-16" id="featured" data-home-products data-currency={currencyJson}>
       <div class="mx-auto max-w-6xl px-5">
         <h2 class="mb-12 text-center font-display text-3xl font-semibold md:text-4xl">
-          All Products
+          <span data-home-products-title>Featured</span>
         </h2>
         <div data-home-products-content>
           <div class="mb-12 grid grid-cols-2 gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3" aria-hidden="true">
@@ -30,9 +30,10 @@ const currencyJson = JSON.stringify(store.currency);
         <div class="text-center" data-home-products-action>
           <a
             href="/products"
+            data-home-products-link
             class="inline-block border-2 border-primary px-8 py-3.5 text-xs font-semibold uppercase tracking-widest text-primary transition-all hover:bg-primary hover:text-white"
           >
-            View All
+            View Collection
           </a>
         </div>
       </div>
@@ -81,13 +82,18 @@ const currencyJson = JSON.stringify(store.currency);
     }
 
     interface HomepagePayload {
+      heading: string;
+      action_url: string;
+      action_label: string;
       products: HomepageProduct[];
       collections: HomepageCollection[];
     }
 
     const productSection = document.querySelector<HTMLElement>('[data-home-products]');
+    const productTitle = document.querySelector<HTMLElement>('[data-home-products-title]');
     const productContent = document.querySelector<HTMLElement>('[data-home-products-content]');
     const productAction = document.querySelector<HTMLElement>('[data-home-products-action]');
+    const productActionLink = document.querySelector<HTMLAnchorElement>('[data-home-products-link]');
     const collectionSection = document.querySelector<HTMLElement>('[data-home-collections]');
     const collectionContent = document.querySelector<HTMLElement>('[data-home-collections-content]');
     const currency = JSON.parse(productSection?.dataset.currency || '{}') as ShoppegoCurrency;
@@ -217,6 +223,15 @@ const currencyJson = JSON.stringify(store.currency);
         if (!response.ok) throw new Error('Homepage catalog request failed.');
 
         const data = await response.json() as HomepagePayload;
+
+        if (productTitle && data.heading) {
+          productTitle.textContent = data.heading;
+        }
+
+        if (productActionLink) {
+          productActionLink.href = data.action_url || '/products';
+          productActionLink.textContent = data.action_label || 'View All';
+        }
 
         if (productContent) {
           productContent.innerHTML = data.products.length

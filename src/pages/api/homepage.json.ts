@@ -1,16 +1,28 @@
 import type { APIRoute } from 'astro';
-import { CollectionService, ProductService } from '@services/index';
+import { CollectionService, ProductService, StoreService } from '@services/index';
 
 export const prerender = true;
 
 export const GET: APIRoute = async () => {
-  const [productEnvelope, collections] = await Promise.all([
-    ProductService.list(1),
+  const [store, collections] = await Promise.all([
+    StoreService.getStore(),
     CollectionService.list()
   ]);
+  const featuredSlug = store.category_featured || '';
+  const featuredCollection = featuredSlug
+    ? await CollectionService.getBySlug(featuredSlug).catch(() => null)
+    : null;
+  const fallbackProducts = featuredCollection ? [] : (await ProductService.list(1)).data;
+  const products = featuredCollection?.products || fallbackProducts;
+  const heading = featuredCollection?.name || 'All Products';
+  const actionUrl = featuredCollection ? `/categories/${encodeURIComponent(featuredCollection.slug)}` : '/products';
+  const actionLabel = featuredCollection ? 'View Collection' : 'View All';
 
   return new Response(JSON.stringify({
-    products: productEnvelope.data.slice(0, 6).map((product) => ({
+    heading,
+    action_url: actionUrl,
+    action_label: actionLabel,
+    products: products.slice(0, 6).map((product) => ({
       name: product.name,
       slug: product.slug,
       price: product.price,
@@ -20,10 +32,13 @@ export const GET: APIRoute = async () => {
       available: product.available,
       featured_image: product.featured_image
     })),
-    collections: collections.slice(0, 3).map((collection) => ({
-      name: collection.name,
-      slug: collection.slug
-    }))
+    collections: collections
+      .filter((collection) => collection.slug !== featuredCollection?.slug)
+      .slice(0, 3)
+      .map((collection) => ({
+        name: collection.name,
+        slug: collection.slug
+      }))
   }), {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
