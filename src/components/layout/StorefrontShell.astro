@@ -280,6 +280,44 @@ const announcements = [
     `;
   }
 
+  function submitBundleCheckout(line: CartLine) {
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/api/bundle-checkout';
+    form.style.display = 'none';
+
+    const fields: Record<string, string> = {
+      product_id: String(line.productId),
+      product_url: line.productUrl || `/products/${line.productSlug}`,
+      quantity: String(line.quantity)
+    };
+
+    Object.entries(fields).forEach(([name, value]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.append(input);
+    });
+
+    (line.bundleProducts || []).forEach((bundleProduct, index) => {
+      Object.entries({
+        product_id: bundleProduct.productId,
+        variant_id: bundleProduct.variantId,
+        quantity: bundleProduct.quantity
+      }).forEach(([field, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = `bundle_products[${index}][${field}]`;
+        input.value = String(value);
+        form.append(input);
+      });
+    });
+
+    document.body.append(form);
+    form.submit();
+  }
+
   function updateCartCount(cart: CartState) {
     const count = CartService.getItemCount(cart);
     document.querySelectorAll<HTMLElement>('.cart-count').forEach((counter) => {
@@ -326,10 +364,23 @@ const announcements = [
     if (button.id === 'cart-checkout') {
       const cart = cartStore.read();
       if (!cart.lines.length) return;
+      const bundleLines = cart.lines.filter((line) => line.type === 'bundle');
 
       button.disabled = true;
       button.textContent = 'Opening checkout...';
       setCartStatus('Checking item availability...', 'neutral');
+
+      if (bundleLines.length) {
+        if (cart.lines.length > 1 || bundleLines.length > 1) {
+          setCartStatus('Bundle checkout must be completed separately. Keep only one bundle in the cart before checkout.', 'error');
+          button.disabled = false;
+          button.textContent = 'Checkout';
+          return;
+        }
+
+        submitBundleCheckout(bundleLines[0]);
+        return;
+      }
 
       try {
         const checkout = await CheckoutService.createCheckout(CartService.toCheckoutInput(cart));

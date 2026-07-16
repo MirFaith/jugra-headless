@@ -1,5 +1,5 @@
 import { CartService } from '@services/CartService';
-import type { AddToCartInput, CartState } from '@models/cart';
+import type { AddBundleToCartInput, AddToCartInput, CartState } from '@models/cart';
 
 const storageKey = 'jugra-headless-cart';
 
@@ -35,6 +35,9 @@ export const cartStore = {
   },
   add(input: AddToCartInput) {
     return write(CartService.addLine(read(), input));
+  },
+  addBundle(input: AddBundleToCartInput) {
+    return write(CartService.addBundleLine(read(), input));
   },
   updateQuantity(variantId: number, quantity: number) {
     return write(CartService.updateQuantity(read(), variantId, quantity));

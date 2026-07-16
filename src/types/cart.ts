@@ -6,8 +6,10 @@ export interface CartLineOption {
 }
 
 export interface CartLine {
+  type?: 'product' | 'bundle';
   variantId: number;
   productId: number;
+  productUrl?: string;
   productSlug: string;
   productName: string;
   variantTitle: string;
@@ -16,6 +18,13 @@ export interface CartLine {
   compareAtPrice: number | null;
   quantity: number;
   options: CartLineOption[];
+  bundleProducts?: CartBundleProduct[];
+}
+
+export interface CartBundleProduct {
+  productId: number;
+  variantId: number;
+  quantity: number;
 }
 
 export interface CartState {
@@ -27,4 +36,10 @@ export interface AddToCartInput {
   product: ShoppegoProduct;
   variant: ShoppegoProductVariant;
   quantity: number;
+}
+
+export interface AddBundleToCartInput {
+  product: ShoppegoProduct;
+  quantity: number;
+  bundleProducts: CartBundleProduct[];
 }

@@ -1,4 +1,4 @@
-import type { AddToCartInput, CartLine, CartState } from '@models/cart';
+import type { AddBundleToCartInput, AddToCartInput, CartLine, CartState } from '@models/cart';
 import type { ShoppegoCheckoutInput } from '@models/shoppego';
 
 const emptyCart = (): CartState => ({
@@ -35,6 +35,30 @@ export class CartService {
     };
   }
 
+  static addBundleLine(cart: CartState, input: AddBundleToCartInput): CartState {
+    const quantity = Math.max(1, Math.floor(input.quantity || 1));
+    const variantId = -Math.abs(input.product.id);
+    const existingLine = cart.lines.find((line) => line.type === 'bundle' && line.productId === input.product.id);
+
+    if (existingLine) {
+      return {
+        lines: cart.lines.map((line) => {
+          if (line !== existingLine) return line;
+          return { ...line, quantity: line.quantity + quantity };
+        }),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    return {
+      lines: [
+        ...cart.lines,
+        this.toBundleCartLine(input, quantity, variantId)
+      ],
+      updatedAt: new Date().toISOString()
+    };
+  }
+
   static updateQuantity(cart: CartState, variantId: number, quantity: number): CartState {
     const normalizedQuantity = Math.max(0, Math.floor(quantity || 0));
 
@@ -66,7 +90,7 @@ export class CartService {
       lines: cart.lines.map((line) => ({
         variant_id: line.variantId,
         quantity: line.quantity
-      })),
+      })).filter((line) => line.variant_id > 0),
       ...(discount ? { discount } : {})
     };
   }
@@ -76,7 +100,9 @@ export class CartService {
 
     return {
       variantId: input.variant.id,
+      type: 'product',
       productId: input.product.id,
+      productUrl: input.product.url,
       productSlug: input.product.slug,
       productName: input.product.name,
       variantTitle: input.variant.title,
@@ -85,6 +111,24 @@ export class CartService {
       compareAtPrice: input.variant.compare_at_price,
       quantity,
       options: Object.entries(input.variant.options).map(([name, value]) => ({ name, value }))
+    };
+  }
+
+  private static toBundleCartLine(input: AddBundleToCartInput, quantity: number, variantId: number): CartLine {
+    return {
+      type: 'bundle',
+      variantId,
+      productId: input.product.id,
+      productUrl: input.product.url,
+      productSlug: input.product.slug,
+      productName: input.product.name,
+      variantTitle: 'Bundle',
+      image: input.product.featured_image || input.product.images[0] || null,
+      price: input.product.price,
+      compareAtPrice: input.product.compare_at_price_max,
+      quantity,
+      options: [{ name: 'Bundle', value: `${input.bundleProducts.length} item${input.bundleProducts.length === 1 ? '' : 's'}` }],
+      bundleProducts: input.bundleProducts
     };
   }
 }

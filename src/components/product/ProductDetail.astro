@@ -39,7 +39,7 @@ const initialCompare = firstVariant?.compare_at_price ?? (
   product.compare_at_price_max && product.compare_at_price_max > product.price ? product.compare_at_price_max : null
 );
 const bundleSavedAmount = initialCompare && initialCompare > initialPrice ? initialCompare - initialPrice : 0;
-const hostedBundleAction = isBundle ? hostedStorePath('/cart/add/bundle') : '';
+const hostedBundleAction = isBundle ? '/api/bundle-checkout' : '';
 const productJson = JSON.stringify(product);
 const currencyJson = JSON.stringify(currency);
 
@@ -78,13 +78,6 @@ function reviewDate(value: string) {
   return value;
 }
 
-function hostedStorePath(path: string) {
-  try {
-    return new URL(path, product.url).toString();
-  } catch {
-    return path;
-  }
-}
 ---
 
 <section class="bg-card py-0 md:py-16">
@@ -209,6 +202,7 @@ function hostedStorePath(path: string) {
         >
           <input type="hidden" id="selected-variant-id" name="variant_id" value={selectableOptions.length > 0 ? '' : firstVariant?.id ?? ''} />
           {isBundle && <input type="hidden" name="product_id" value={product.id} />}
+          {isBundle && <input type="hidden" name="product_url" value={product.url} />}
           <div id="product-alert" class="mb-4 hidden rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             Please select an option.
           </div>
@@ -856,7 +850,26 @@ function hostedStorePath(path: string) {
 
     addButton?.addEventListener('click', () => {
       if (isBundle) {
-        submitHostedBundle('add');
+        const lines = getBundleLines();
+        if (!lines) return;
+
+        cartStore.addBundle({
+          product,
+          quantity: getQuantity(),
+          bundleProducts: lines.map((line) => ({
+            productId: line.bundleProduct.id,
+            variantId: line.variant.id,
+            quantity: line.quantity
+          }))
+        });
+        window.dispatchEvent(new CustomEvent('jugra:open-cart'));
+
+        if (addButton) {
+          addButton.textContent = 'Added';
+          window.setTimeout(() => {
+            addButton.textContent = 'Add to cart';
+          }, 1200);
+        }
         return;
       }
 
