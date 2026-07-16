@@ -39,6 +39,7 @@ const initialCompare = firstVariant?.compare_at_price ?? (
   product.compare_at_price_max && product.compare_at_price_max > product.price ? product.compare_at_price_max : null
 );
 const bundleSavedAmount = initialCompare && initialCompare > initialPrice ? initialCompare - initialPrice : 0;
+const hostedBundleAction = isBundle ? hostedStorePath('/cart/add/bundle') : '';
 const productJson = JSON.stringify(product);
 const currencyJson = JSON.stringify(currency);
 
@@ -75,6 +76,14 @@ function reviewDate(value: string) {
   const dateMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (dateMatch) return `${dateMatch[3]}/${dateMatch[2]}/${dateMatch[1]}`;
   return value;
+}
+
+function hostedStorePath(path: string) {
+  try {
+    return new URL(path, product.url).toString();
+  } catch {
+    return path;
+  }
 }
 ---
 
@@ -190,8 +199,16 @@ function reviewDate(value: string) {
           </p>
         </div>
 
-        <form id="product-form" data-product={productJson} data-currency={currencyJson}>
+        <form
+          id="product-form"
+          action={hostedBundleAction || undefined}
+          method={isBundle ? 'post' : undefined}
+          enctype={isBundle ? 'multipart/form-data' : undefined}
+          data-product={productJson}
+          data-currency={currencyJson}
+        >
           <input type="hidden" id="selected-variant-id" name="variant_id" value={selectableOptions.length > 0 ? '' : firstVariant?.id ?? ''} />
+          {isBundle && <input type="hidden" name="product_id" value={product.id} />}
           <div id="product-alert" class="mb-4 hidden rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             Please select an option.
           </div>
@@ -258,6 +275,7 @@ function reviewDate(value: string) {
                                   value={variant.id}
                                   selected={selectedVariant?.id === variant.id}
                                   disabled={!variant.available}
+                                  data-product-id={bundleProduct.id}
                                   data-price={variant.price}
                                   data-compare-at-price={variant.compare_at_price || ''}
                                   data-image={variant.image || bundleProduct.featured_image || bundleProduct.images[0] || ''}
@@ -270,10 +288,12 @@ function reviewDate(value: string) {
                           ) : (
                             <input class="bundle-variant-id" type="hidden" value={selectedVariant?.id || ''} />
                           )}
+                          <input type="hidden" name={`bundle_products[${index}][product_id]`} value={bundleProduct.id} />
+                          <input class="bundle-form-variant-id" type="hidden" name={`bundle_products[${index}][variant_id]`} value={selectedVariant?.id || ''} />
 
                           <div class="bundle-quantity-controls flex w-fit items-stretch border border-secondary-border">
                             <button type="button" class="bundle-quantity-minus px-3 py-2 text-sm transition-colors hover:bg-secondary-border/10" aria-label={`Decrease ${bundleProduct.name} quantity`}>-</button>
-                            <input class="bundle-quantity-input w-14 border-x border-secondary-border/50 text-center text-sm focus:outline-none" type="number" min="1" value="1" />
+                            <input class="bundle-quantity-input w-14 border-x border-secondary-border/50 text-center text-sm focus:outline-none" name={`bundle_products[${index}][quantity]`} type="number" min="1" value="1" />
                             <button type="button" class="bundle-quantity-plus px-3 py-2 text-sm transition-colors hover:bg-secondary-border/10" aria-label={`Increase ${bundleProduct.name} quantity`}>+</button>
                           </div>
                         </div>
@@ -716,6 +736,26 @@ function reviewDate(value: string) {
       return Math.max(1, Number(quantityInput?.value || 1));
     }
 
+    function setBundleAction(actionName: 'add' | 'express') {
+      if (!form) return;
+
+      form.querySelectorAll<HTMLInputElement>('input[name="add"], input[name="express"]').forEach((input) => input.remove());
+      const actionInput = document.createElement('input');
+      actionInput.type = 'hidden';
+      actionInput.name = actionName;
+      actionInput.value = '1';
+      form.append(actionInput);
+    }
+
+    function submitHostedBundle(actionName: 'add' | 'express') {
+      const lines = getBundleLines();
+      if (!lines || !form) return false;
+
+      setBundleAction(actionName);
+      form.submit();
+      return true;
+    }
+
     function getBundleVariant(bundleProduct: ShoppegoBundleProduct, variantId: number): ShoppegoProductVariant | null {
       return bundleProduct.variants.find((variant) => variant.id === variantId) || null;
     }
@@ -731,6 +771,7 @@ function reviewDate(value: string) {
         const bundleProduct = product.bundle_products[index];
         const select = lineEl.querySelector<HTMLSelectElement>('.bundle-variant-select');
         const hiddenInput = lineEl.querySelector<HTMLInputElement>('.bundle-variant-id');
+        const formVariantInput = lineEl.querySelector<HTMLInputElement>('.bundle-form-variant-id');
         const quantityField = lineEl.querySelector<HTMLInputElement>('.bundle-quantity-input');
         const variantId = Number(select?.value || hiddenInput?.value || 0);
         const variant = bundleProduct ? getBundleVariant(bundleProduct, variantId) : null;
@@ -756,6 +797,9 @@ function reviewDate(value: string) {
           variant,
           quantity: Math.max(1, Number(quantityField?.value || 1))
         });
+
+        if (formVariantInput) formVariantInput.value = String(variant.id);
+        if (quantityField) quantityField.value = String(Math.max(1, Number(quantityField.value || 1)));
       }
 
       if (!lines.length) {
@@ -765,28 +809,6 @@ function reviewDate(value: string) {
 
       alertEl?.classList.add('hidden');
       return lines;
-    }
-
-    function toCartProduct(bundleProduct: ShoppegoBundleProduct): ShoppegoProduct {
-      return {
-        id: bundleProduct.id,
-        name: bundleProduct.name,
-        slug: product.slug,
-        url: product.url,
-        description: null,
-        price: bundleProduct.selected_or_first_available_variant?.price || 0,
-        compare_at_price_min: null,
-        compare_at_price_max: null,
-        price_varies: false,
-        available: true,
-        featured_image: bundleProduct.featured_image,
-        images: bundleProduct.images || [],
-        has_options: false,
-        has_only_default_variant: true,
-        selected_or_first_available_variant: bundleProduct.selected_or_first_available_variant,
-        options: [],
-        variants: bundleProduct.variants
-      };
     }
 
     document.querySelectorAll<HTMLButtonElement>('.bundle-quantity-minus, .bundle-quantity-plus').forEach((button) => {
@@ -805,6 +827,7 @@ function reviewDate(value: string) {
       select.addEventListener('change', () => {
         const selected = select.selectedOptions[0];
         const line = select.closest<HTMLElement>('[data-bundle-line]');
+        const formVariantInput = line?.querySelector<HTMLInputElement>('.bundle-form-variant-id');
         const price = Number(selected?.dataset.price || 0);
         const compareAtPrice = Number(selected?.dataset.compareAtPrice || 0);
         const hasCompare = compareAtPrice > price;
@@ -827,29 +850,13 @@ function reviewDate(value: string) {
           const img = line?.querySelector<HTMLImageElement>('.bundle-thumbnails img');
           if (img) img.src = image;
         }
+        if (formVariantInput) formVariantInput.value = select.value;
       });
     });
 
     addButton?.addEventListener('click', () => {
       if (isBundle) {
-        const lines = getBundleLines();
-        if (!lines) return;
-
-        lines.forEach((line) => {
-          cartStore.add({
-            product: toCartProduct(line.bundleProduct),
-            variant: line.variant,
-            quantity: line.quantity
-          });
-        });
-        window.dispatchEvent(new CustomEvent('jugra:open-cart'));
-
-        if (addButton) {
-          addButton.textContent = 'Added';
-          window.setTimeout(() => {
-            addButton.textContent = 'Add to cart';
-          }, 1200);
-        }
+        submitHostedBundle('add');
         return;
       }
 
@@ -873,28 +880,9 @@ function reviewDate(value: string) {
 
     buyButton?.addEventListener('click', async () => {
       if (isBundle) {
-        const lines = getBundleLines();
-        if (!lines || !buyButton) return;
-
-        buyButton.disabled = true;
-        buyButton.textContent = 'Opening checkout...';
-
-        try {
-          const checkout = await CheckoutService.createCheckout({
-            lines: lines.map((line) => ({
-              variant_id: line.variant.id,
-              quantity: line.quantity
-            }))
-          });
-          window.location.href = checkout.checkout_url;
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Checkout could not be created.';
-          if (alertEl) {
-            alertEl.textContent = message;
-            alertEl.classList.remove('hidden');
-          }
-          buyButton.disabled = false;
-          buyButton.textContent = 'Buy now';
+        if (submitHostedBundle('express') && buyButton) {
+          buyButton.disabled = true;
+          buyButton.textContent = 'Opening checkout...';
         }
         return;
       }
