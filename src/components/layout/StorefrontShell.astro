@@ -23,6 +23,7 @@ const announcements = [
 <SearchModal />
 <CartDrawer currency={store.currency} />
 <slot />
+<div class="social-proofs" aria-live="polite"></div>
 <Footer store={store} footerMenu={footerMenu} />
 
 <script>
@@ -30,7 +31,7 @@ const announcements = [
   import { CartService } from '@services/CartService';
   import { cartStore } from '@stores/cartStore';
   import type { CartLine, CartState } from '@models/cart';
-  import type { ShoppegoCurrency } from '@models/shoppego';
+  import type { ShoppegoCurrency, ShoppegoRecentSale } from '@models/shoppego';
 
   function setVisibility(element: HTMLElement | null, visible: boolean) {
     if (!element) return;
@@ -358,4 +359,97 @@ const announcements = [
   });
 
   renderCart();
+
+  const recentSalesRoot = document.querySelector<HTMLElement>('.social-proofs');
+
+  function recentProductPath(url: string | null): string {
+    if (!url) return '/products';
+
+    try {
+      const parsed = new URL(url);
+      return parsed.pathname || '/products';
+    } catch {
+      return url.startsWith('/') ? url : '/products';
+    }
+  }
+
+  function recentLocation(sale: ShoppegoRecentSale): string {
+    return [sale.customer.city, sale.customer.state, sale.customer.country]
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  function recentSaleHtml(sale: ShoppegoRecentSale): string {
+    const customer = escapeHtml(sale.customer.name || 'Someone');
+    const location = escapeHtml(recentLocation(sale));
+    const productName = escapeHtml(sale.product.name);
+    const productPath = escapeHtml(recentProductPath(sale.product.url));
+    const image = sale.product.featured_image
+      ? `<img src="${escapeHtml(sale.product.featured_image)}" alt="${productName}" class="h-full w-full object-cover" loading="lazy" />`
+      : '<div class="h-full w-full bg-secondary-border/20"></div>';
+
+    return `
+      <div class="social-proof-popup fixed bottom-4 left-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-3 border border-secondary-border/40 bg-card p-3 pr-9 shadow-lg md:max-w-xs">
+        <a href="${productPath}" class="h-14 w-14 flex-shrink-0 overflow-hidden bg-secondary-border/10" aria-hidden="true" tabindex="-1">
+          ${image}
+        </a>
+        <div class="min-w-0 text-sm">
+          <p class="text-secondary">${customer}${location ? ` from ${location}` : ''} recently bought</p>
+          <a href="${productPath}" class="block truncate font-medium text-accent hover:text-primary">${productName}</a>
+        </div>
+        <button type="button" class="social-proof-close absolute right-2 top-2 text-secondary hover:text-primary" aria-label="Close recent purchase">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    `;
+  }
+
+  async function initRecentSales() {
+    if (!recentSalesRoot) return;
+
+    const apiBase = import.meta.env.PUBLIC_SHOPPEGO_API_BASE_URL;
+    if (!apiBase) return;
+
+    let recentUrl = '';
+    try {
+      recentUrl = new URL('/recent.json', new URL(apiBase).origin).toString();
+    } catch {
+      return;
+    }
+
+    try {
+      const response = await fetch(recentUrl, { mode: 'cors', credentials: 'omit' });
+      if (!response.ok) return;
+
+      const sales = await response.json() as ShoppegoRecentSale[];
+      if (!Array.isArray(sales) || !sales.length) return;
+
+      let index = 0;
+      let closed = false;
+
+      const showSale = () => {
+        if (closed) return;
+        recentSalesRoot.innerHTML = recentSaleHtml(sales[index]);
+        recentSalesRoot.querySelector<HTMLButtonElement>('.social-proof-close')?.addEventListener('click', () => {
+          closed = true;
+          recentSalesRoot.innerHTML = '';
+        });
+        index = (index + 1) % sales.length;
+      };
+
+      window.setTimeout(showSale, 2500);
+      window.setInterval(showSale, 9000);
+    } catch {
+      recentSalesRoot.innerHTML = '';
+    }
+  }
+
+  const scheduleIdle = window.requestIdleCallback;
+  if (scheduleIdle) {
+    scheduleIdle(() => initRecentSales(), { timeout: 3000 });
+  } else {
+    window.setTimeout(initRecentSales, 1500);
+  }
 </script>

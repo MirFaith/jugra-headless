@@ -201,6 +201,7 @@ export interface ShoppegoCheckoutLineInput {
 export interface ShoppegoCheckoutInput {
   lines: ShoppegoCheckoutLineInput[];
   discount?: string;
+  note?: string;
 }
 
 export interface ShoppegoCheckoutLine {
@@ -217,4 +218,21 @@ export interface ShoppegoCheckout {
   total: number;
   tax: number;
   lines: ShoppegoCheckoutLine[];
+}
+
+export interface ShoppegoRecentSale {
+  customer: {
+    name: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
+    country_code: string | null;
+  };
+  product: {
+    name: string;
+    url: string | null;
+    featured_image: string | null;
+  };
+  total_order_price: string | null;
+  created_at: string;
 }

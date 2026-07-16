@@ -28,8 +28,12 @@ const selectableOptions = product.options.filter((option) => {
 const customOptions = product.options.filter((option) => {
   return ['date', 'datetime', 'input', 'textarea'].includes(option.type);
 });
+const isBundle = Boolean(product.is_bundle && bundleProducts.length > 0);
 const initialPrice = firstVariant?.price ?? product.price;
-const initialCompare = firstVariant?.compare_at_price ?? null;
+const initialCompare = firstVariant?.compare_at_price ?? (
+  product.compare_at_price_max && product.compare_at_price_max > product.price ? product.compare_at_price_max : null
+);
+const bundleSavedAmount = initialCompare && initialCompare > initialPrice ? initialCompare - initialPrice : 0;
 const productJson = JSON.stringify(product);
 const currencyJson = JSON.stringify(currency);
 
@@ -50,17 +54,12 @@ function variantOptionsLabel(variant: ShoppegoProductVariant) {
     .join(', ');
 }
 
-function stockLabel(variant: ShoppegoProductVariant | null | undefined) {
-  if (!variant) return product.available ? 'Available' : 'Sold out';
-  if (!variant.available) return 'Sold out';
-  if (variant.manage_stock && typeof variant.inventory_quantity === 'number') {
-    return variant.inventory_quantity > 0 ? `${variant.inventory_quantity} available` : 'Sold out';
-  }
-  return 'Available';
-}
-
 function bundleImage(bundleProduct: { featured_image: string | null; images: string[]; selected_or_first_available_variant: ShoppegoProductVariant | null }) {
   return bundleProduct.selected_or_first_available_variant?.image || bundleProduct.featured_image || bundleProduct.images[0] || null;
+}
+
+function variantComparePrice(variant: ShoppegoProductVariant | null | undefined) {
+  return variant?.compare_at_price && variant.compare_at_price > variant.price ? variant.compare_at_price : null;
 }
 
 function optionValueImage(option: ShoppegoProductOption, value: string) {
@@ -175,7 +174,126 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
             Please select an option.
           </div>
 
-          {selectableOptions.length > 0 && (
+          {isBundle && (
+            <div id="bundles" class="mb-6 border border-secondary-border/40">
+              <div class="border-b border-secondary-border/30 bg-secondary-border/5 px-4 py-3">
+                <p id="bundle-saved-price" class="text-sm font-semibold text-accent">
+                  {bundleSavedAmount > 0 ? `Save ${formatMoney(bundleSavedAmount, currency)} With This Bundle!` : 'Grab This Amazing Bundle Now!'}
+                </p>
+              </div>
+              <ul class="product-bundle divide-y divide-secondary-border/30">
+                {bundleProducts.map((bundleProduct, index) => {
+                  const selectedVariant = bundleProduct.selected_or_first_available_variant || bundleProduct.variants.find((variant) => variant.available) || bundleProduct.variants[0] || null;
+                  const image = bundleImage(bundleProduct);
+                  const comparePrice = variantComparePrice(selectedVariant);
+
+                  return (
+                    <li
+                      class="bundle-items p-4"
+                      data-bundle-line
+                      data-bundle-index={index}
+                      data-bundle-product-id={bundleProduct.id}
+                      data-bundle-product-name={bundleProduct.name}
+                      data-bundle-product-image={image || ''}
+                    >
+                      <div class="flex gap-4">
+                        <div class="bundle-thumbnails h-20 w-20 flex-shrink-0 bg-secondary-border/10">
+                          {image ? (
+                            <img src={image} alt={bundleProduct.name} class="h-full w-full object-cover" loading="lazy" />
+                          ) : (
+                            <div class="h-full w-full bg-secondary-border/20"></div>
+                          )}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <h3 class="mb-2 text-base font-medium text-accent">{bundleProduct.name}</h3>
+                          {selectedVariant && (
+                            <div class="mb-3 text-sm">
+                              <span
+                                class:list={[
+                                  'bundle-discount-price-single text-secondary line-through',
+                                  !comparePrice && 'hidden'
+                                ]}
+                              >
+                                {comparePrice ? formatMoney(comparePrice, currency) : ''}
+                              </span>
+                              <span class="bundle-price ml-1 text-accent">{formatMoney(selectedVariant.price, currency)}</span>
+                              <p
+                                class:list={[
+                                  'bundle-saved-price-variant mb-1 text-xs text-green-700',
+                                  !comparePrice && 'hidden'
+                                ]}
+                              >
+                                {comparePrice ? `(Save ${formatMoney(comparePrice - selectedVariant.price, currency)})` : ''}
+                              </p>
+                            </div>
+                          )}
+
+                          {bundleProduct.variants.length > 1 ? (
+                            <select class="bundle-variant-select mb-3 w-full border border-secondary-border bg-card px-3 py-3 text-sm focus:border-primary focus:outline-none" aria-label={`${bundleProduct.name} option`}>
+                              <option value="">Please select</option>
+                              {bundleProduct.variants.map((variant) => (
+                                <option
+                                  value={variant.id}
+                                  selected={selectedVariant?.id === variant.id}
+                                  disabled={!variant.available}
+                                  data-price={variant.price}
+                                  data-compare-at-price={variant.compare_at_price || ''}
+                                  data-image={variant.image || bundleProduct.featured_image || bundleProduct.images[0] || ''}
+                                  data-title={variant.title}
+                                >
+                                  {variantOptionsLabel(variant) || variant.title}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input class="bundle-variant-id" type="hidden" value={selectedVariant?.id || ''} />
+                          )}
+
+                          <div class="bundle-quantity-controls flex w-fit items-stretch border border-secondary-border">
+                            <button type="button" class="bundle-quantity-minus px-3 py-2 text-sm transition-colors hover:bg-secondary-border/10" aria-label={`Decrease ${bundleProduct.name} quantity`}>-</button>
+                            <input class="bundle-quantity-input w-14 border-x border-secondary-border/50 text-center text-sm focus:outline-none" type="number" min="1" value="1" />
+                            <button type="button" class="bundle-quantity-plus px-3 py-2 text-sm transition-colors hover:bg-secondary-border/10" aria-label={`Increase ${bundleProduct.name} quantity`}>+</button>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          {wholesalePrices.length > 0 && !isBundle && (
+            <div class="wholesale-section mb-6 border border-secondary-border/40">
+              <div class="border-b border-secondary-border/30 bg-secondary-border/5 px-4 py-3">
+                <span class="text-sm font-medium text-accent">Buy More, Pay Less!</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                  <thead class="bg-secondary-border/5 text-secondary">
+                    <tr>
+                      <th class="px-3 py-3 text-center font-medium">Quantity</th>
+                      <th class="px-3 py-3 text-center font-medium">Unit price</th>
+                      <th class="px-3 py-3 text-center font-medium">Saving per unit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {wholesalePrices.map((tier) => (
+                      <tr class="border-t border-secondary-border/30">
+                        <td class="px-3 py-3 text-center text-accent">
+                          {tier.maximum_quantity ? `${tier.minimum_quantity} - ${tier.maximum_quantity}` : `${tier.minimum_quantity} or more`}
+                        </td>
+                        <td class="px-3 py-3 text-center text-accent">{formatMoney(tier.unit_price, currency)}</td>
+                        <td class="px-3 py-3 text-center text-accent">{formatMoney(tier.saving_per_unit, currency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {selectableOptions.length > 0 && !isBundle && (
             <div id="product-options" class="mb-6">
               {selectableOptions.map((option) => (
                 <div class="mb-4" data-option-group={option.name}>
@@ -208,7 +326,8 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
                         <button
                           type="button"
                           class:list={[
-                            'product-option-button relative flex w-full items-center justify-start gap-4 overflow-hidden border border-secondary-border text-sm font-medium text-accent transition-all hover:border-primary',
+                            'product-option-button relative flex min-h-12 w-full items-center overflow-hidden border border-secondary-border text-sm font-medium text-accent transition-all hover:border-primary',
+                            image ? 'justify-start gap-4' : 'justify-center px-4 text-center',
                             !available && 'cursor-not-allowed opacity-30'
                           ]}
                           data-option-name={option.name}
@@ -220,7 +339,7 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
                               <img src={image} alt={value.name} class="h-full w-full object-cover" loading="lazy" />
                             </div>
                           )}
-                          <span class="pr-3">{value.name}</span>
+                          <span class:list={[image && 'pr-3']}>{value.name}</span>
                           <span class="option-active-indicator absolute bottom-0 right-0 hidden" aria-hidden="true">
                             <span class="block h-0 w-0 border-b-[24px] border-l-[24px] border-b-primary border-l-transparent"></span>
                             <svg class="absolute h-2.5 w-2.5 text-white" style="left: 12px; top: 11px;" fill="currentColor" viewBox="0 0 20 20">
@@ -271,7 +390,7 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
             </div>
           )}
 
-          {product.variants.length > 1 && product.has_only_default_variant && (
+          {product.variants.length > 1 && product.has_only_default_variant && !isBundle && (
             <div class="mb-4 text-sm text-secondary">
               {product.variants.map((variant) => (
                 <p>{variantOptionsLabel(variant)}</p>
@@ -279,6 +398,7 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
             </div>
           )}
 
+          {!isBundle && (
           <div class="mb-6">
             <label class="mb-2 block text-sm font-medium" for="product-quantity">Quantity</label>
             <div class="flex items-center gap-4">
@@ -306,6 +426,7 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
               </div>
             </div>
           </div>
+          )}
 
           <div class="space-y-3">
             {product.available ? (
@@ -339,66 +460,6 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
       </div>
     </div>
 
-    {wholesalePrices.length > 0 && (
-      <section class="mt-12 border-t border-secondary-border/40 px-5 pt-10 md:px-0">
-        <h2 class="mb-6 font-display text-2xl font-semibold text-accent">Wholesale pricing</h2>
-        <div class="overflow-x-auto">
-          <table class="w-full border border-secondary-border/40 text-left text-sm">
-            <thead class="bg-secondary-border/10 text-accent">
-              <tr>
-                <th class="px-4 py-3 font-medium">Quantity</th>
-                <th class="px-4 py-3 font-medium">Unit price</th>
-                <th class="px-4 py-3 font-medium">Saving</th>
-              </tr>
-            </thead>
-            <tbody>
-              {wholesalePrices.map((tier) => (
-                <tr class="border-t border-secondary-border/30">
-                  <td class="px-4 py-3 text-secondary">
-                    {tier.maximum_quantity ? `${tier.minimum_quantity} - ${tier.maximum_quantity}` : `${tier.minimum_quantity}+`}
-                  </td>
-                  <td class="px-4 py-3 text-accent">{formatMoney(tier.unit_price, currency)}</td>
-                  <td class="px-4 py-3 text-secondary">{formatMoney(tier.saving_per_unit, currency)} / unit</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    )}
-
-    {bundleProducts.length > 0 && (
-      <section class="mt-12 border-t border-secondary-border/40 px-5 pt-10 md:px-0">
-        <h2 class="mb-6 font-display text-2xl font-semibold text-accent">Included in this bundle</h2>
-        <div class="grid gap-4 md:grid-cols-2">
-          {bundleProducts.map((bundleProduct) => {
-            const selectedVariant = bundleProduct.selected_or_first_available_variant || bundleProduct.variants.find((variant) => variant.available) || bundleProduct.variants[0] || null;
-            const image = bundleImage(bundleProduct);
-
-            return (
-              <article class="flex gap-4 border border-secondary-border/40 p-4">
-                <div class="h-24 w-24 flex-shrink-0 bg-secondary-border/20">
-                  {image && <img src={image} alt={bundleProduct.name} class="h-full w-full object-cover" loading="lazy" />}
-                </div>
-                <div class="min-w-0">
-                  <h3 class="font-medium text-accent">{bundleProduct.name}</h3>
-                  {selectedVariant && (
-                    <>
-                      <p class="mt-1 text-sm text-secondary">{variantOptionsLabel(selectedVariant) || selectedVariant.title}</p>
-                      <p class="mt-1 text-sm text-secondary">
-                        Quantity included: {selectedVariant.fixed_quantity || 1}
-                      </p>
-                      <p class="mt-1 text-sm text-secondary">{stockLabel(selectedVariant)}</p>
-                    </>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-    )}
-
     {reviews.length > 0 && (
       <section class="mt-12 border-t border-secondary-border/40 px-5 pt-10 md:px-0">
         <h2 class="mb-6 font-display text-2xl font-semibold text-accent">Customer reviews</h2>
@@ -425,7 +486,7 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
 <script>
   import { CheckoutService } from '@services/CheckoutService';
   import { cartStore } from '@stores/cartStore';
-  import type { ShoppegoProduct, ShoppegoProductVariant } from '@models/shoppego';
+  import type { ShoppegoBundleProduct, ShoppegoProduct, ShoppegoProductVariant, ShoppegoWholesalePrice } from '@models/shoppego';
 
   function formatMoney(amount: number, currency: { symbol?: string; decimal_digits?: number; thousand_separator?: string }) {
     const decimals = Number.isInteger(currency.decimal_digits) ? (currency.decimal_digits as number) : 2;
@@ -451,6 +512,8 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
     const addButton = document.getElementById('btn-add-to-cart') as HTMLButtonElement | null;
     const buyButton = document.getElementById('btn-buynow') as HTMLButtonElement | null;
     const selections: Record<string, string> = {};
+    const isBundle = Boolean(product.is_bundle && product.bundle_products?.length);
+    const wholesalePrices = (product.wholesale_prices || []) as ShoppegoWholesalePrice[];
     let activeGalleryIndex = 0;
 
     function syncStock(variant: ShoppegoProductVariant | null) {
@@ -512,11 +575,29 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
       }
       syncStock(variant);
       if (variant.image) showGalleryImage(variant.image);
+      syncWholesalePrice();
       document.querySelectorAll<HTMLButtonElement>('#btn-add-to-cart, #btn-buynow').forEach((button) => {
         button.disabled = !variant.available;
         button.classList.toggle('opacity-50', !variant.available);
         button.classList.toggle('cursor-not-allowed', !variant.available);
       });
+    }
+
+    function getWholesaleTier(quantity: number): ShoppegoWholesalePrice | null {
+      return wholesalePrices.find((tier) => {
+        const aboveMinimum = quantity >= tier.minimum_quantity;
+        const belowMaximum = !tier.maximum_quantity || quantity <= tier.maximum_quantity;
+        return aboveMinimum && belowMaximum;
+      }) || null;
+    }
+
+    function syncWholesalePrice() {
+      if (!wholesalePrices.length || isBundle || !priceEl) return;
+
+      const tier = getWholesaleTier(getQuantity());
+      const variant = findVariant();
+      const basePrice = variant?.price ?? product.price;
+      priceEl.textContent = formatMoney(tier?.unit_price ?? basePrice, currency);
     }
 
     optionButtons.forEach((button) => {
@@ -544,11 +625,18 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
     document.getElementById('quantity-minus')?.addEventListener('click', () => {
       if (!quantityInput) return;
       quantityInput.value = String(Math.max(1, Number(quantityInput.value || 1) - 1));
+      syncWholesalePrice();
     });
 
     document.getElementById('quantity-plus')?.addEventListener('click', () => {
       if (!quantityInput) return;
       quantityInput.value = String(Math.max(1, Number(quantityInput.value || 1) + 1));
+      syncWholesalePrice();
+    });
+
+    quantityInput?.addEventListener('change', () => {
+      quantityInput.value = String(Math.max(1, Number(quantityInput.value || 1)));
+      syncWholesalePrice();
     });
 
     document.querySelectorAll<HTMLButtonElement>('.product-gallery-thumb').forEach((thumb) => {
@@ -588,7 +676,143 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
       return Math.max(1, Number(quantityInput?.value || 1));
     }
 
+    function getBundleVariant(bundleProduct: ShoppegoBundleProduct, variantId: number): ShoppegoProductVariant | null {
+      return bundleProduct.variants.find((variant) => variant.id === variantId) || null;
+    }
+
+    function getBundleLines(): Array<{ bundleProduct: ShoppegoBundleProduct; variant: ShoppegoProductVariant; quantity: number }> | null {
+      if (!isBundle || !product.bundle_products?.length) return null;
+
+      const lines: Array<{ bundleProduct: ShoppegoBundleProduct; variant: ShoppegoProductVariant; quantity: number }> = [];
+      const lineEls = Array.from(document.querySelectorAll<HTMLElement>('[data-bundle-line]'));
+
+      for (const lineEl of lineEls) {
+        const index = Number(lineEl.dataset.bundleIndex || 0);
+        const bundleProduct = product.bundle_products[index];
+        const select = lineEl.querySelector<HTMLSelectElement>('.bundle-variant-select');
+        const hiddenInput = lineEl.querySelector<HTMLInputElement>('.bundle-variant-id');
+        const quantityField = lineEl.querySelector<HTMLInputElement>('.bundle-quantity-input');
+        const variantId = Number(select?.value || hiddenInput?.value || 0);
+        const variant = bundleProduct ? getBundleVariant(bundleProduct, variantId) : null;
+
+        if (!bundleProduct || !variant) {
+          if (alertEl) {
+            alertEl.textContent = 'Please select a bundle option.';
+            alertEl.classList.remove('hidden');
+          }
+          return null;
+        }
+
+        if (!variant.available) {
+          if (alertEl) {
+            alertEl.textContent = 'One of the bundle items is currently unavailable.';
+            alertEl.classList.remove('hidden');
+          }
+          return null;
+        }
+
+        lines.push({
+          bundleProduct,
+          variant,
+          quantity: Math.max(1, Number(quantityField?.value || 1))
+        });
+      }
+
+      if (!lines.length) {
+        alertEl?.classList.remove('hidden');
+        return null;
+      }
+
+      alertEl?.classList.add('hidden');
+      return lines;
+    }
+
+    function toCartProduct(bundleProduct: ShoppegoBundleProduct): ShoppegoProduct {
+      return {
+        id: bundleProduct.id,
+        name: bundleProduct.name,
+        slug: product.slug,
+        url: product.url,
+        description: null,
+        price: bundleProduct.selected_or_first_available_variant?.price || 0,
+        compare_at_price_min: null,
+        compare_at_price_max: null,
+        price_varies: false,
+        available: true,
+        featured_image: bundleProduct.featured_image,
+        images: bundleProduct.images || [],
+        has_options: false,
+        has_only_default_variant: true,
+        selected_or_first_available_variant: bundleProduct.selected_or_first_available_variant,
+        options: [],
+        variants: bundleProduct.variants
+      };
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.bundle-quantity-minus, .bundle-quantity-plus').forEach((button) => {
+      button.addEventListener('click', () => {
+        const input = button.closest('[data-bundle-line]')?.querySelector<HTMLInputElement>('.bundle-quantity-input');
+        if (!input) return;
+
+        const next = button.classList.contains('bundle-quantity-plus')
+          ? Number(input.value || 1) + 1
+          : Number(input.value || 1) - 1;
+        input.value = String(Math.max(1, next));
+      });
+    });
+
+    document.querySelectorAll<HTMLSelectElement>('.bundle-variant-select').forEach((select) => {
+      select.addEventListener('change', () => {
+        const selected = select.selectedOptions[0];
+        const line = select.closest<HTMLElement>('[data-bundle-line]');
+        const price = Number(selected?.dataset.price || 0);
+        const compareAtPrice = Number(selected?.dataset.compareAtPrice || 0);
+        const hasCompare = compareAtPrice > price;
+
+        const priceEl = line?.querySelector<HTMLElement>('.bundle-price');
+        const compareEl = line?.querySelector<HTMLElement>('.bundle-discount-price-single');
+        const savedEl = line?.querySelector<HTMLElement>('.bundle-saved-price-variant');
+        const image = selected?.dataset.image;
+
+        if (priceEl) priceEl.textContent = formatMoney(price, currency);
+        if (compareEl) {
+          compareEl.textContent = hasCompare ? formatMoney(compareAtPrice, currency) : '';
+          compareEl.classList.toggle('hidden', !hasCompare);
+        }
+        if (savedEl) {
+          savedEl.textContent = hasCompare ? `(Save ${formatMoney(compareAtPrice - price, currency)})` : '';
+          savedEl.classList.toggle('hidden', !hasCompare);
+        }
+        if (image) {
+          const img = line?.querySelector<HTMLImageElement>('.bundle-thumbnails img');
+          if (img) img.src = image;
+        }
+      });
+    });
+
     addButton?.addEventListener('click', () => {
+      if (isBundle) {
+        const lines = getBundleLines();
+        if (!lines) return;
+
+        lines.forEach((line) => {
+          cartStore.add({
+            product: toCartProduct(line.bundleProduct),
+            variant: line.variant,
+            quantity: line.quantity
+          });
+        });
+        window.dispatchEvent(new CustomEvent('jugra:open-cart'));
+
+        if (addButton) {
+          addButton.textContent = 'Added';
+          window.setTimeout(() => {
+            addButton.textContent = 'Add to cart';
+          }, 1200);
+        }
+        return;
+      }
+
       const variant = getSelectedVariant();
       if (!variant) return;
 
@@ -608,6 +832,33 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
     });
 
     buyButton?.addEventListener('click', async () => {
+      if (isBundle) {
+        const lines = getBundleLines();
+        if (!lines || !buyButton) return;
+
+        buyButton.disabled = true;
+        buyButton.textContent = 'Opening checkout...';
+
+        try {
+          const checkout = await CheckoutService.createCheckout({
+            lines: lines.map((line) => ({
+              variant_id: line.variant.id,
+              quantity: line.quantity
+            }))
+          });
+          window.location.href = checkout.checkout_url;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Checkout could not be created.';
+          if (alertEl) {
+            alertEl.textContent = message;
+            alertEl.classList.remove('hidden');
+          }
+          buyButton.disabled = false;
+          buyButton.textContent = 'Buy now';
+        }
+        return;
+      }
+
       const variant = getSelectedVariant();
       if (!variant || !buyButton) return;
 
@@ -632,7 +883,7 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
 
     document.querySelectorAll<HTMLButtonElement>('#btn-add-to-cart, #btn-buynow').forEach((button) => {
       button.addEventListener('click', () => {
-        if (!selectedVariantInput?.value) {
+        if (!isBundle && !selectedVariantInput?.value) {
           alertEl?.classList.remove('hidden');
         }
       });
