@@ -379,23 +379,41 @@ const announcements = [
       .join(', ');
   }
 
+  function countryFlag(countryCode: string | null): string {
+    if (!countryCode || countryCode.length !== 2) return '';
+
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map((letter) => 127397 + letter.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  }
+
   function recentSaleHtml(sale: ShoppegoRecentSale): string {
     const customer = escapeHtml(sale.customer.name || 'Someone');
     const location = escapeHtml(recentLocation(sale));
+    const flag = escapeHtml(countryFlag(sale.customer.country_code));
     const productName = escapeHtml(sale.product.name);
     const productPath = escapeHtml(recentProductPath(sale.product.url));
+    const total = sale.total_order_price ? ` ${escapeHtml(sale.total_order_price)}` : '';
     const image = sale.product.featured_image
       ? `<img src="${escapeHtml(sale.product.featured_image)}" alt="${productName}" class="h-full w-full object-cover" loading="lazy" />`
       : '<div class="h-full w-full bg-secondary-border/20"></div>';
 
     return `
-      <div class="social-proof-popup fixed bottom-4 left-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-3 border border-secondary-border/40 bg-card p-3 pr-9 shadow-lg md:max-w-xs">
-        <a href="${productPath}" class="h-14 w-14 flex-shrink-0 overflow-hidden bg-secondary-border/10" aria-hidden="true" tabindex="-1">
+      <div class="social-proof-popup fixed bottom-4 left-4 z-40 flex w-[calc(100vw-2rem)] max-w-sm items-center gap-4 rounded-lg bg-card p-4 pr-9 shadow-lg">
+        <a href="${productPath}" class="h-14 w-14 flex-shrink-0 overflow-hidden rounded bg-secondary-border/10" aria-hidden="true" tabindex="-1">
           ${image}
         </a>
-        <div class="min-w-0 text-sm">
-          <p class="text-secondary">${customer}${location ? ` from ${location}` : ''} recently bought</p>
-          <a href="${productPath}" class="block truncate font-medium text-accent hover:text-primary">${productName}</a>
+        <div class="min-w-0 flex-1 text-sm">
+          <p class="leading-relaxed text-accent">
+            ${customer}${location ? ` from ${location}` : ''}${flag ? `, ${flag}` : ''} recently ordered
+            <a href="${productPath}" class="font-medium text-accent hover:text-primary">${productName}${total}</a>
+          </p>
+          <p class="mt-1 flex items-center gap-1.5 text-xs text-secondary">
+            <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-green-500 text-[9px] leading-none text-white" aria-hidden="true">✓</span>
+            Verified order by Shoppego
+          </p>
         </div>
         <button type="button" class="social-proof-close absolute right-2 top-2 text-secondary hover:text-primary" aria-label="Close recent purchase">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

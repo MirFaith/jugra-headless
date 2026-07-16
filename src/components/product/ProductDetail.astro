@@ -20,6 +20,11 @@ const images = Array.from(new Set([
 ].filter((image): image is string => Boolean(image))));
 const productCollections = product.collections || [];
 const reviews = product.reviews || [];
+const reviewCount = reviews.length;
+const averageRating = reviewCount
+  ? reviews.reduce((total, review) => total + Math.max(0, Math.min(5, Number(review.rating) || 0)), 0) / reviewCount
+  : 0;
+const roundedAverageRating = Math.round(averageRating);
 const wholesalePrices = product.wholesale_prices || [];
 const bundleProducts = product.bundle_products || [];
 const selectableOptions = product.options.filter((option) => {
@@ -64,6 +69,12 @@ function variantComparePrice(variant: ShoppegoProductVariant | null | undefined)
 
 function optionValueImage(option: ShoppegoProductOption, value: string) {
   return product.variants.find((variant) => variant.options?.[option.name] === value && variant.image)?.image || null;
+}
+
+function reviewDate(value: string) {
+  const dateMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateMatch) return `${dateMatch[3]}/${dateMatch[2]}/${dateMatch[1]}`;
+  return value;
 }
 ---
 
@@ -151,6 +162,17 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
         <h1 class="mb-2 font-display text-3xl font-semibold md:text-4xl">
           {product.name}
         </h1>
+
+        {reviewCount > 0 && (
+          <div class="mb-5 flex items-center gap-2 text-sm text-secondary">
+            <span class="flex items-center gap-0.5" aria-label={`${averageRating.toFixed(1)} out of 5 stars`}>
+              {Array.from({ length: 5 }).map((_, index) => (
+                <span class={index < roundedAverageRating ? 'text-[#d9a441]' : 'text-secondary-border'} aria-hidden="true">★</span>
+              ))}
+            </span>
+            <span>{averageRating.toFixed(0)} ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</span>
+          </div>
+        )}
 
         <div class="mb-2 flex items-center gap-3">
           <p
@@ -461,20 +483,38 @@ function optionValueImage(option: ShoppegoProductOption, value: string) {
     </div>
 
     {reviews.length > 0 && (
-      <section class="mt-12 border-t border-secondary-border/40 px-5 pt-10 md:px-0">
-        <h2 class="mb-6 font-display text-2xl font-semibold text-accent">Customer reviews</h2>
-        <div class="grid gap-4 md:grid-cols-2">
+      <section class="mt-14 border-t border-secondary-border/40 px-5 py-12 md:px-0 md:py-16">
+        <div class="mb-14 text-center">
+          <h2 class="mb-4 font-display text-3xl font-semibold text-accent md:text-4xl">Customer Reviews</h2>
+          <div class="flex items-center justify-center gap-2 text-sm text-secondary">
+            <span class="flex items-center gap-0.5" aria-label={`${averageRating.toFixed(1)} out of 5 stars`}>
+              {Array.from({ length: 5 }).map((_, index) => (
+                <span class={index < roundedAverageRating ? 'text-[#d9a441]' : 'text-secondary-border'} aria-hidden="true">★</span>
+              ))}
+            </span>
+            <span>{averageRating.toFixed(0)} ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})</span>
+          </div>
+        </div>
+        <div>
           {reviews.map((review) => (
-            <article class="border border-secondary-border/40 p-5">
-              <div class="mb-3 flex items-center justify-between gap-4">
-                <p class="font-medium text-accent">{review.customer_name || 'Verified customer'}</p>
-                <p class="text-sm text-secondary">
-                  Rating {Math.max(0, Math.min(5, review.rating))}/5
-                </p>
+            <article class="border-b border-secondary-border/40 py-8">
+              <div class="grid gap-5 md:grid-cols-[1fr_auto] md:items-start">
+                <div>
+                  <p class="mb-8 flex items-center gap-1.5 text-xs text-secondary">
+                    <span class="inline-flex h-3 w-3 items-center justify-center rounded-full bg-green-600 text-[8px] leading-none text-white" aria-hidden="true">✓</span>
+                    Verified buyer
+                  </p>
+                  <p class="leading-relaxed text-secondary">{review.description}</p>
+                </div>
+                <div class="md:text-right">
+                  <div class="mb-1 flex items-center gap-0.5 md:justify-end" aria-label={`${review.rating} out of 5 stars`}>
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <span class={index < Math.round(Math.max(0, Math.min(5, review.rating))) ? 'text-[#d9a441]' : 'text-secondary-border'} aria-hidden="true">★</span>
+                    ))}
+                  </div>
+                  <p class="text-xs text-secondary">{reviewDate(review.created_at)}</p>
+                </div>
               </div>
-              {review.variant && <p class="mb-2 text-xs uppercase tracking-widest text-secondary">{review.variant}</p>}
-              <p class="leading-relaxed text-secondary">{review.description}</p>
-              <p class="mt-4 text-xs text-secondary">{review.created_at}</p>
             </article>
           ))}
         </div>
