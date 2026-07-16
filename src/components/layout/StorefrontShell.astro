@@ -280,25 +280,11 @@ const announcements = [
     `;
   }
 
-  function submitBundleCheckout(line: CartLine) {
-    const form = document.createElement('form');
-    form.method = 'post';
-    form.action = '/api/bundle-checkout';
-    form.style.display = 'none';
-
-    const fields: Record<string, string> = {
-      product_id: String(line.productId),
-      product_url: line.productUrl || `/products/${line.productSlug}`,
-      quantity: String(line.quantity)
-    };
-
-    Object.entries(fields).forEach(([name, value]) => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = name;
-      input.value = value;
-      form.append(input);
-    });
+  async function createBundleCheckout(line: CartLine): Promise<string> {
+    const body = new FormData();
+    body.set('product_id', String(line.productId));
+    body.set('product_url', line.productUrl || `/products/${line.productSlug}`);
+    body.set('quantity', String(line.quantity));
 
     (line.bundleProducts || []).forEach((bundleProduct, index) => {
       Object.entries({
@@ -306,16 +292,24 @@ const announcements = [
         variant_id: bundleProduct.variantId,
         quantity: bundleProduct.quantity
       }).forEach(([field, value]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = `bundle_products[${index}][${field}]`;
-        input.value = String(value);
-        form.append(input);
+        body.set(`bundle_products[${index}][${field}]`, String(value));
       });
     });
 
-    document.body.append(form);
-    form.submit();
+    const response = await fetch('/api/bundle-checkout', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json'
+      },
+      body
+    });
+    const payload = await response.json().catch(() => null) as { checkout_url?: string; error?: string } | null;
+
+    if (!response.ok || !payload?.checkout_url) {
+      throw new Error(payload?.error || 'Bundle checkout could not be created.');
+    }
+
+    return payload.checkout_url;
   }
 
   function updateCartCount(cart: CartState) {
@@ -378,8 +372,17 @@ const announcements = [
           return;
         }
 
-        submitBundleCheckout(bundleLines[0]);
-        return;
+        try {
+          const checkoutUrl = await createBundleCheckout(bundleLines[0]);
+          window.location.href = checkoutUrl;
+          return;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Bundle checkout could not be created.';
+          setCartStatus(message, 'error');
+          button.disabled = false;
+          button.textContent = 'Checkout';
+          return;
+        }
       }
 
       try {

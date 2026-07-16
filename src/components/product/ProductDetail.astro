@@ -39,7 +39,6 @@ const initialCompare = firstVariant?.compare_at_price ?? (
   product.compare_at_price_max && product.compare_at_price_max > product.price ? product.compare_at_price_max : null
 );
 const bundleSavedAmount = initialCompare && initialCompare > initialPrice ? initialCompare - initialPrice : 0;
-const hostedBundleAction = isBundle ? '/api/bundle-checkout' : '';
 const productJson = JSON.stringify(product);
 const currencyJson = JSON.stringify(currency);
 
@@ -194,9 +193,7 @@ function reviewDate(value: string) {
 
         <form
           id="product-form"
-          action={hostedBundleAction || undefined}
-          method={isBundle ? 'post' : undefined}
-          enctype={isBundle ? 'multipart/form-data' : undefined}
+          data-bundle-checkout-url={isBundle ? '/api/bundle-checkout' : undefined}
           data-product={productJson}
           data-currency={currencyJson}
         >
@@ -730,24 +727,29 @@ function reviewDate(value: string) {
       return Math.max(1, Number(quantityInput?.value || 1));
     }
 
-    function setBundleAction(actionName: 'add' | 'express') {
-      if (!form) return;
-
-      form.querySelectorAll<HTMLInputElement>('input[name="add"], input[name="express"]').forEach((input) => input.remove());
-      const actionInput = document.createElement('input');
-      actionInput.type = 'hidden';
-      actionInput.name = actionName;
-      actionInput.value = '1';
-      form.append(actionInput);
-    }
-
-    function submitHostedBundle(actionName: 'add' | 'express') {
+    async function createHostedBundleCheckout() {
       const lines = getBundleLines();
-      if (!lines || !form) return false;
+      if (!lines || !form) return null;
 
-      setBundleAction(actionName);
-      form.submit();
-      return true;
+      const checkoutUrl = form.dataset.bundleCheckoutUrl || '/api/bundle-checkout';
+      const body = new FormData(form);
+      body.set('quantity', String(getQuantity()));
+      body.set('express', '1');
+
+      const response = await fetch(checkoutUrl, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json'
+        },
+        body
+      });
+      const payload = await response.json().catch(() => null) as { checkout_url?: string; error?: string } | null;
+
+      if (!response.ok || !payload?.checkout_url) {
+        throw new Error(payload?.error || 'Bundle checkout could not be created.');
+      }
+
+      return payload.checkout_url;
     }
 
     function getBundleVariant(bundleProduct: ShoppegoBundleProduct, variantId: number): ShoppegoProductVariant | null {
@@ -893,9 +895,21 @@ function reviewDate(value: string) {
 
     buyButton?.addEventListener('click', async () => {
       if (isBundle) {
-        if (submitHostedBundle('express') && buyButton) {
+        if (!buyButton) return;
+
+        try {
           buyButton.disabled = true;
           buyButton.textContent = 'Opening checkout...';
+          const checkoutUrl = await createHostedBundleCheckout();
+          if (checkoutUrl) window.location.href = checkoutUrl;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Bundle checkout could not be created.';
+          if (alertEl) {
+            alertEl.textContent = message;
+            alertEl.classList.remove('hidden');
+          }
+          buyButton.disabled = false;
+          buyButton.textContent = 'Buy now';
         }
         return;
       }

@@ -32,6 +32,7 @@ function normalizeHostedUrl(value) {
 }
 
 async function createBundleCheckout(request) {
+  const wantsJson = (request.headers.get('accept') || '').includes('application/json');
   const contentType = request.headers.get('content-type') || '';
   const input = contentType.includes('application/json')
     ? await request.json()
@@ -51,9 +52,7 @@ async function createBundleCheckout(request) {
       return items;
     }, []);
 
-  if (!productId || !bundleProducts.length) {
-    return Response.json({ error: 'Missing bundle product data.' }, { status: 422 });
-  }
+  if (!productId || !bundleProducts.length) return Response.json({ error: 'Missing bundle product data.' }, { status: 422 });
 
   const productResponse = await fetch(productUrl.toString(), {
     headers: {
@@ -98,6 +97,10 @@ async function createBundleCheckout(request) {
   const location = addResponse.headers.get('location');
   if (!location || !/\/checkouts\//.test(location)) {
     return Response.json({ error: 'Shoppego did not return a bundle checkout URL.' }, { status: 502 });
+  }
+
+  if (wantsJson) {
+    return Response.json({ checkout_url: location });
   }
 
   return Response.redirect(location, 303);
