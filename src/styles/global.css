@@ -35,24 +35,45 @@
     opacity: 1;
   }
 
-  .prose-jugra {
-    max-width: 65ch;
-    line-height: 1.7;
+  .jugra-builder-content {
+    width: 100%;
+    color: inherit;
   }
 
-  .prose-jugra p {
-    margin-bottom: 1.25em;
+  .jugra-builder-content img,
+  .jugra-rich-content img {
+    max-width: 100%;
+    height: auto;
   }
 
-  .prose-jugra h1,
-  .prose-jugra h2,
-  .prose-jugra h3,
-  .prose-jugra h4,
-  .prose-jugra h5,
-  .prose-jugra h6 {
-    @apply font-display font-semibold text-accent;
-    line-height: 1.3;
-    margin-top: 1.5em;
-    margin-bottom: 0.75em;
+  .jugra-rich-content {
+    line-height: inherit;
+  }
+
+  .jugra-rich-content > * + * {
+    margin-top: 1rem;
+  }
+
+  .jugra-rich-content ul,
+  .jugra-rich-content ol {
+    padding-left: 1.5rem;
+  }
+
+  .jugra-rich-content ul {
+    list-style: disc;
+  }
+
+  .jugra-rich-content ol {
+    list-style: decimal;
+  }
+
+  .jugra-rich-content a {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .product-description {
+    font-size: 0.95rem;
+    line-height: 1.8;
   }
 }

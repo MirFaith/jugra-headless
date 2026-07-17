@@ -488,7 +488,7 @@ function reviewDate(value: string) {
         </form>
 
         {product.description && (
-          <div class="prose-jugra mt-8 text-secondary" set:html={sanitizeHtml(product.description)} />
+          <div class="jugra-rich-content product-description mt-8 text-secondary" set:html={sanitizeHtml(product.description)} />
         )}
       </div>
     </div>
