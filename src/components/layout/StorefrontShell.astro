@@ -482,20 +482,29 @@ const announcements = [
     if (!recentSalesRoot) return;
 
     const apiBase = import.meta.env.PUBLIC_SHOPPEGO_API_BASE_URL;
-    if (!apiBase) return;
+    const storefrontToken = import.meta.env.PUBLIC_SHOPPEGO_STOREFRONT_TOKEN;
+    if (!apiBase || !storefrontToken) return;
 
     let recentUrl = '';
     try {
-      recentUrl = new URL('/recent.json', new URL(apiBase).origin).toString();
+      recentUrl = new URL(`${apiBase.replace(/\/+$/, '')}/recent-sales`).toString();
     } catch {
       return;
     }
 
     try {
-      const response = await fetch(recentUrl, { mode: 'cors', credentials: 'omit' });
+      const response = await fetch(recentUrl, {
+        mode: 'cors',
+        credentials: 'omit',
+        headers: {
+          Accept: 'application/json',
+          'X-Storefront-Token': storefrontToken
+        }
+      });
       if (!response.ok) return;
 
-      const sales = await response.json() as ShoppegoRecentSale[];
+      const envelope = await response.json() as { data?: ShoppegoRecentSale[] };
+      const sales = envelope.data;
       if (!Array.isArray(sales) || !sales.length) return;
 
       let index = 0;
